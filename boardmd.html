@@ -47,6 +47,9 @@ button[hidden]{display:none}
 .chip.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
 .bdg{display:inline-block;font-size:10px;font-weight:700;line-height:15px;padding:0 5px;border-radius:8px;margin-right:5px;border:1px solid var(--mute);color:var(--mute);vertical-align:1px}
 .bdg.e{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.lk{margin-top:3px;font-size:11px;color:var(--acc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.lk:hover{text-decoration:underline}
+.card.flash{outline:2px solid var(--acc);outline-offset:2px}
 .cd{color:var(--mute);font-size:12px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ph{height:34px;border:2px dashed var(--acc);border-radius:6px;flex:none}
 .add{margin:8px;text-align:left;color:var(--mute);background:none;border-style:dashed}
@@ -153,6 +156,42 @@ function renderBar() {
 function dimmed(k, q) {
   const f = filt(), bd = badge(k);
   return (q && !(k.title + '\n' + k.desc).toLowerCase().includes(q)) || (f.tag && !k.title.includes(f.tag)) || (f.kind && !(bd && bd.kind === f.kind));
+}
+
+/* ---------- Cross-board links ---------- */
+const norm = t => t.replace(/[\p{Extended_Pictographic}\uFE0F\u200d]/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+function otherBoards() {   // norm title -> [{ti, col}] for cards in the other open boards
+  const m = new Map();
+  tabs.forEach((t, ti) => { if (t !== T) t.b.cols.forEach(c => c.cards.forEach(k => { const n = norm(k.title); if (n) (m.get(n) || m.set(n, []).get(n)).push({ti, col:c.title}); })); });
+  return m;
+}
+function gotoCard(ti, n) {
+  activate(ti);
+  const el = [...document.querySelectorAll('.card')].find(x => x.dataset.n === n);
+  if (el) { el.scrollIntoView({block:'center', inline:'center'}); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1800); }
+}
+
+/* ---------- Archive ---------- */
+async function archiveHandle() {
+  let hd; try { hd = await idbGet('archive'); } catch (e) {}
+  if (hd && await hd.requestPermission({mode:'readwrite'}).catch(() => 'denied') === 'granted') return hd;
+  hd = await showSaveFilePicker({suggestedName:'archiv.md', types:FT});   // existing file is kept: we append
+  try { await idbSet('archive', hd); } catch (e) {}
+  return hd;
+}
+async function archiveCol(ci) {
+  if (!window.showSaveFilePicker) { st('Archiving needs a Chromium browser'); return; }
+  const c = T.b.cols[ci];
+  try {
+    const hd = await archiveHandle();
+    const text = await (await hd.getFile()).text();
+    const a = parse(text.trim() ? text : '# Archive\n');
+    const note = 'Archived ' + new Date().toISOString().slice(0, 10) + ' from "' + T.b.title + '"';
+    a.cols.push({title:c.title, desc:note + (c.desc ? '\n\n' + c.desc : ''), cards:c.cards.map(k => ({...k}))});
+    const w = await hd.createWritable(); await w.write(ser(a)); await w.close();
+    mut(() => T.b.cols.splice(ci, 1));
+    st('Archived "' + c.title + '" to ' + hd.name);
+  } catch (e) { if (e.name !== 'AbortError') st('Archive failed: ' + e.message); }
 }
 
 /* ---------- Session (IndexedDB) ---------- */
@@ -321,7 +360,7 @@ function render() {
       window.showOpenFilePicker ? '' : h('p', {class:'hint'}, 'This browser cannot write back to files: Save downloads the .md. Boards stay open between visits, but use Chrome, Edge or Brave for autosave to disk.')));
     return;
   }
-  const B = T.b, q = $('#q').value.toLowerCase();
+  const B = T.b, q = $('#q').value.toLowerCase(), ob = otherBoards();
   B.cols.forEach((c, ci) => {
     const list = h('div', {class:'cards'});
     c.cards.forEach((k, ki) => {
@@ -343,6 +382,9 @@ function render() {
         },
         ondragend:() => { drag = null; render(); }
       }, h('div', {class:'ct'}, k.title), (bd || meta) ? h('div', {class:'cd'}, bd ? h('span', {class:'bdg ' + bd.kind.toLowerCase(), title:bd.raw}, bd.text) : '', meta) : '');
+      const n = norm(k.title); el.dataset.n = n;
+      for (const l of (ob.get(n) || []).slice(0, 3)) el.append(h('div', {class:'lk', title:'Go to this card in ' + tabs[l.ti].name,
+        onclick:e => { e.stopPropagation(); gotoCard(l.ti, n); }}, '↔ ' + tabs[l.ti].b.title + ' › ' + l.col));
       list.append(el);
     });
     const name = h('span', {class:'cn', ondblclick:e => rename(e.target, () => c.title, v => c.title = v)}, c.title);
@@ -350,6 +392,7 @@ function render() {
       class:'ch', draggable:true,
       ondragstart:e => { drag = {t:'col', ci}; e.dataTransfer.setData('text/plain', ''); e.dataTransfer.effectAllowed = 'move'; }
     }, name, h('span', {class:'cnt'}, String(c.cards.length)),
+      h('button', {class:'x', title:'Archive column to archiv.md', onclick:() => archiveCol(ci)}, '🗄'),
       h('button', {class:'x', title:'Delete column', onclick:() => {
         if (!c.cards.length || confirm('Delete column "' + c.title + '" with ' + c.cards.length + ' cards?')) mut(() => B.cols.splice(ci, 1));
       }}, '×'));

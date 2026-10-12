@@ -35,6 +35,8 @@ Headings inside code fences are ignored, and headings with four or more `#` stay
 - Colored flags (emoji in the card title)
 - Legend as filter: a line `Farben: 🟥 27.1 · 🟧 26.3 · 🟩 Hardware` in the board description (also `Legende:`, `Legend:`, `Flags:`) becomes a row of filter chips; click one to fade out all cards without that flag
 - `[E]` / `[V]` badges: a `[E]`, `[V]` or `[V Coding]` tag in a card description is shown as a badge on the card and can be filtered ("decided" / "proposals")
+- Archive a column (🗄 in the column header): it is appended to an `archiv.md` file (picked once, then remembered) and removed from the board. The archive is a normal board file; undo only restores the column in the board, not in the archive
+- Cross-board links: a card whose title matches a card in another open board (flags and punctuation ignored) shows `↔ Board › Column`; click it to jump there
 - Undo and redo per board
 - Autosave to disk, no save dialog after the first permission prompt
 - Remembers your open boards between visits
