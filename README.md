@@ -65,9 +65,16 @@ Writing back to the original file uses the [File System Access API](https://deve
 
 When you reopen the page, Chromium may ask again for file access. Click **Restore boards from last session** in the header to grant it.
 
-## Run it like an app (Linux)
+## Run it like an app
 
-Chromium browsers can open the page in its own window without tabs or address bar:
+Chromium browsers can open the page in its own window without tabs or address bar
+
+### Windows
+```
+chrome app=file:///C:\Users\<your place\boardmd.html
+```
+
+### Linux
 
 ```
 chromium --app=file:///path/to/boardmd.html
@@ -86,6 +93,7 @@ Categories=Office;ProjectManagement;
 ```
 
 Replace `chromium` with `google-chrome-stable`, `chromium-browser` as needed. Add `--user-data-dir=$HOME/.config/boardmd` to give the app its own browser profile.
+
 
 ## License
 
