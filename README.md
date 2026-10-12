@@ -34,6 +34,29 @@ Or from a checkout: `./install.sh`. It installs into `<directory>/board.md` and 
 
 Headings inside code fences are ignored, and headings with four or more `#` stay part of the card description. Text under the board title and column headings is preserved in the file. See [`examples/demo.board.md`](examples/demo.board.md) for an example.
 
+## Colors
+
+Colors are plain emoji characters in the card title, so they live in the `.md` file and show up everywhere.
+
+| Key | Flag | Unicode |
+|---|---|---|
+| `1` | 🟥 | `U+1F7E5` |
+| `2` | 🟧 | `U+1F7E7` |
+| `3` | 🟨 | `U+1F7E8` |
+| `4` | 🟩 | `U+1F7E9` |
+| `5` | 🟦 | `U+1F7E6` |
+| `6` | 🟪 | `U+1F7EA` |
+| `7` | 🟫 | `U+1F7EB` |
+| `8` | ⬜ | `U+2B1C` |
+
+- **In the app:** hover a card and press `1`–`8` to toggle the flag in its title.
+- **In a text editor, or for the legend line:** type or paste the character yourself:
+  - Linux (GTK/GNOME): `Ctrl+Shift+U`, type the hex code (e.g. `1f7e5`), then `Space` or `Enter`. The emoji picker opens with `Ctrl+.` or `Ctrl+;`.
+  - Windows: `Win+.`
+  - macOS: `Ctrl+Cmd+Space`
+  - or copy them from the table above.
+- A legend line in the board description (`Legend: 🟥 Urgent · 🟩 Done`, see [Features](#features)) can use any emoji, not only these eight. The part before the first space of each entry is the tag a card must contain in its title.
+
 ## Features
 
 - Drag and drop cards and columns
