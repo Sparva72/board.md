@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='26' fill='%232d5f8b'/%3E%3Cpath d='M22 26h20v16H22zM22 47h20v16H22zM54 26h20v16H54zM86 26h20v16H86z' fill='%23fff'/%3E%3C/svg%3E">
+<title>Board MD</title>
+<style>
+:root{--bg:#e8ecef;--col:#d9dfe4;--card:#fff;--ink:#1b2430;--mute:#66727f;--line:#c3ccd4;--acc:#2d5f8b;--acc-ink:#fff;--bar:#f6f8f9}
+@media(prefers-color-scheme:dark){:root{--bg:#13181d;--col:#1c232a;--card:#262f38;--ink:#e4e9ee;--mute:#8b98a5;--line:#35414c;--acc:#6aa5d6;--acc-ink:#0f1620;--bar:#1a2127}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bar);border-bottom:1px solid var(--line);flex-wrap:wrap}
+header b{font-size:15px;margin-right:4px}
+#title{font-weight:600;padding:2px 6px;border-radius:4px;cursor:text}
+#st{color:var(--mute);font-size:12px;margin-left:auto}
+button,input,textarea{font:inherit;color:inherit}
+button{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+button.danger{color:#c0392b}
+button[hidden]{display:none}
+:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+#q{padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);width:180px}
+#tabs{display:flex;gap:2px;padding:6px 12px 0;background:var(--bar);border-bottom:1px solid var(--line);overflow-x:auto}
+#tabs:empty{display:none}
+.tab{display:flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;border:1px solid var(--line);border-bottom:0;border-radius:6px 6px 0 0;background:var(--bg);color:var(--mute);cursor:pointer;white-space:nowrap;margin-bottom:-1px}
+.tab.on{background:var(--col);color:var(--ink);font-weight:600}
+#app{flex:1;display:flex;gap:12px;padding:12px;overflow-x:auto;align-items:flex-start}
+.col{flex:0 0 280px;max-height:100%;display:flex;flex-direction:column;background:var(--col);border-radius:8px;border:2px solid transparent}
+.col.dl{border-left-color:var(--acc)}.col.dr{border-right-color:var(--acc)}
+.ch{display:flex;align-items:center;gap:6px;padding:8px 10px;cursor:grab}
+.cn{font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere;cursor:text}
+.cnt{color:var(--mute);font-size:12px}
+.x{border:0;background:none;color:var(--mute);padding:0 4px;font-size:16px}
+.cards{overflow-y:auto;padding:0 8px;display:flex;flex-direction:column;gap:6px;min-height:8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:7px 9px;cursor:pointer}
+.card:hover{border-color:var(--acc)}
+.card.dim{opacity:.3;transform:scale(.94);transform-origin:left}
+.card.ghost{opacity:.3}
+.ct{overflow-wrap:anywhere}
+.cd{color:var(--mute);font-size:12px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph{height:34px;border:2px dashed var(--acc);border-radius:6px;flex:none}
+.add{margin:8px;text-align:left;color:var(--mute);background:none;border-style:dashed}
+.addcol{flex:0 0 200px;margin:0}
+#empty{margin:auto;text-align:center;max-width:440px;color:var(--mute)}
+#empty h1{color:var(--ink);font-size:22px;margin:0 0 8px}
+#empty .row{display:flex;gap:8px;justify-content:center;margin:16px 0}
+.ov{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:16px}
+.dlg{background:var(--card);border-radius:10px;width:min(680px,100%);max-height:90vh;display:flex;flex-direction:column;gap:8px;padding:14px}
+.mt{font-size:17px;font-weight:600;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.md{flex:1;min-height:280px;resize:vertical;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font:13px/1.5 ui-monospace,Menlo,Consolas,monospace}
+.dlg .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hint{color:var(--mute);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <b>Board MD</b>
+  <button id="bo">Open</button>
+  <button id="bn">New</button>
+  <button id="bs">Save</button>
+  <button id="br" class="pri" hidden></button>
+  <span id="title"></span>
+  <input id="q" type="search" placeholder="Search (Ctrl+F)">
+  <span id="st"></span>
+</header>
+<div id="tabs"></div>
+<main id="app"></main>
+<input type="file" id="fi" accept=".md,.markdown,.txt" multiple hidden>
+
+<script>
+const $ = s => document.querySelector(s);
+const FLAGS = ['🟥','🟧','🟨','🟩','🟦','🟪','🟫','⬜'];
+const FT = [{description:'Markdown', accept:{'text/markdown':['.md','.markdown','.txt']}}];
+let tabs = [], T = null, active = -1, pending = [];
+let drag = null, drop = null, hov = null, hovCol = null, modal = null, clip = null;
+const ph = document.createElement('div'); ph.className = 'ph';
+
+function h(t, p = {}, ...k) {
+  const e = document.createElement(t);
+  for (const x in p) {
+    if (x.startsWith('on')) e.addEventListener(x.slice(2), p[x]);
+    else if (x === 'class') e.className = p[x];
+    else e[x] = p[x];
+  }
+  e.append(...k); return e;
+}
+const st = t => $('#st').textContent = t;
+
+/* ---------- Markdown <-> Board ---------- */
+function parse(t) {
+  const b = {title:'Board', desc:[], cols:[]};
+  let cur = b, col = null, fence = false, h1 = false;
+  for (const l of t.replace(/\r/g, '').split('\n')) {
+    if (/^\s*(```|~~~)/.test(l)) fence = !fence;
+    const m = !fence && l.match(/^(#{1,3}) +(.*)$/);
+    if (m) {
+      const n = m[1].length;
+      if (n === 1 && !h1) { h1 = true; b.title = m[2]; cur = b; continue; }
+      if (n === 2) { col = {title:m[2], desc:[], cards:[]}; b.cols.push(col); cur = col; continue; }
+      if (n === 3 && col) { cur = {title:m[2], desc:[]}; col.cards.push(cur); continue; }
+    }
+    cur.desc.push(l);
+  }
+  const fin = o => o.desc = o.desc.join('\n').trim();
+  fin(b); b.cols.forEach(c => { fin(c); c.cards.forEach(fin); });
+  return b;
+}
+function ser(b) {
+  let s = '# ' + b.title + '\n\n';
+  if (b.desc) s += b.desc + '\n\n';
+  for (const c of b.cols) {
+    s += '## ' + c.title + '\n\n';
+    if (c.desc) s += c.desc + '\n\n';
+    for (const k of c.cards) { s += '### ' + k.title + '\n\n'; if (k.desc) s += k.desc + '\n\n'; }
+  }
+  return s.trimEnd() + '\n';
+}
+
+/* ---------- Session (IndexedDB) ---------- */
+const idb = () => new Promise((res, rej) => {
+  const r = indexedDB.open('boardmd', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('s');
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+});
+async function idbGet(k) {
+  const d = await idb();
+  return new Promise((res, rej) => { const q = d.transaction('s').objectStore('s').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+}
+async function idbSet(k, v) {
+  const d = await idb();
+  return new Promise((res, rej) => { const tx = d.transaction('s', 'readwrite'); tx.objectStore('s').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+}
+async function persist() {
+  try {
+    const list = tabs.map(t => t.h ? {h:t.h, name:t.name} : {name:t.name, text:ser(t.b)}).concat(pending);
+    await idbSet('session', {tabs:list, active});
+  } catch (e) {}
+}
+const mk = (text, hd, name, mod) => ({b:parse(text), h:hd, name, mod:mod || 0, undo:[], redo:[], dirty:false, timer:0});
+async function restore() {
+  let s; try { s = await idbGet('session'); } catch (e) {}
+  if (!s) return;
+  for (const e of s.tabs) {
+    if (!e.h) { tabs.push(mk(e.text, null, e.name)); continue; }
+    try {
+      if (await e.h.queryPermission({mode:'readwrite'}) === 'granted') {
+        const f = await e.h.getFile(); tabs.push(mk(await f.text(), e.h, f.name, f.lastModified));
+      } else pending.push(e);
+    } catch (err) { pending.push(e); }
+  }
+  activate(tabs.length ? Math.min(s.active > 0 ? s.active : 0, tabs.length - 1) : -1);
+}
+$('#br').onclick = async () => {
+  const ps = pending.splice(0);
+  const rs = await Promise.all(ps.map(e => e.h.requestPermission({mode:'readwrite'}).catch(() => 'denied')));
+  for (let i = 0; i < ps.length; i++) {
+    if (rs[i] !== 'granted') { pending.push(ps[i]); continue; }
+    try { const f = await ps[i].h.getFile(); tabs.push(mk(await f.text(), ps[i].h, f.name, f.lastModified)); } catch (e) {}
+  }
+  activate(tabs.length ? Math.max(active, 0) : -1);
+};
+
+/* ---------- Tabs & files ---------- */
+function activate(i) { active = i; T = tabs[i] || null; render(); persist(); }
+function closeTab(i) {
+  const t = tabs[i];
+  if (!t.h && !confirm('"' + t.name + '" was never saved to disk. Close it anyway?')) return;
+  tabs.splice(i, 1);
+  activate(tabs.length ? Math.min(i < active ? active - 1 : active, tabs.length - 1) : -1);
+}
+async function addFile(hd) {
+  for (let i = 0; i < tabs.length; i++) if (tabs[i].h && await tabs[i].h.isSameEntry(hd)) return activate(i);
+  const f = await hd.getFile(); tabs.push(mk(await f.text(), hd, f.name, f.lastModified));
+  activate(tabs.length - 1); st('Loaded – autosave on');
+}
+async function openFile() {
+  if (window.showOpenFilePicker) {
+    try { for (const hd of await showOpenFilePicker({types:FT, multiple:true})) await addFile(hd); } catch (e) {}
+  } else $('#fi').click();
+}
+$('#fi').onchange = async e => {
+  for (const f of e.target.files) tabs.push(mk(await f.text(), null, f.name));
+  e.target.value = ''; activate(tabs.length - 1); st('Loaded – Save downloads the file');
+};
+async function newBoard() {
+  const t = mk('# My board\n\n## Todo\n\n## Doing\n\n## Done\n', null, 'board.md');
+  if (window.showSaveFilePicker) {
+    try { t.h = await showSaveFilePicker({suggestedName:'board.md', types:FT}); t.name = t.h.name; } catch (e) {}
+  }
+  tabs.push(t); activate(tabs.length - 1); write(t);
+}
+function save() {
+  const t = T; t.dirty = true; st('Unsaved …'); renderTabs();
+  clearTimeout(t.timer); t.timer = setTimeout(() => write(t), 400);
+}
+async function write(t) {
+  if (!t.h) { if (t === T) st('Not on disk – Save downloads the .md'); persist(); return; }
+  try {
+    const w = await t.h.createWritable(); await w.write(ser(t.b)); await w.close();
+    t.mod = (await t.h.getFile()).lastModified; t.dirty = false; if (t === T) st('Saved');
+  } catch (e) { st('Error: ' + e.message); }
+  renderTabs();
+}
+async function saveNow() {
+  if (!T) return;
+  clearTimeout(T.timer);
+  if (!T.h && window.showSaveFilePicker) {
+    try { T.h = await showSaveFilePicker({suggestedName:T.name, types:FT}); T.name = T.h.name; persist(); } catch (e) { return; }
+  }
+  if (T.h) return write(T);
+  const a = h('a', {href:URL.createObjectURL(new Blob([ser(T.b)], {type:'text/markdown'})), download:T.name});
+  a.click(); URL.revokeObjectURL(a.href); T.dirty = false; st('Downloaded'); renderTabs();
+}
+addEventListener('focus', async () => {   // pick up external changes (e.g. Syncthing)
+  if (modal) return;
+  for (const t of tabs) {
+    if (!t.h || t.dirty) continue;
+    try {
+      const f = await t.h.getFile();
+      if (f.lastModified > t.mod) { t.mod = f.lastModified; t.b = parse(await f.text()); t.undo = []; t.redo = []; if (t === T) { render(); st('Reloaded from disk'); } }
+    } catch (e) {}
+  }
+});
+addEventListener('beforeunload', e => { if (tabs.some(t => t.dirty)) e.preventDefault(); });
+
+/* ---------- Mutations / undo ---------- */
+function mut(fn) { T.undo.push(ser(T.b)); T.redo = []; fn(); render(); save(); }
+function doUndo() { if (!T.undo.length) return; T.redo.push(ser(T.b)); T.b = parse(T.undo.pop()); render(); save(); }
+function doRedo() { if (!T.redo.length) return; T.undo.push(ser(T.b)); T.b = parse(T.redo.pop()); render(); save(); }
+function rename(el, get, set) {
+  if (el.parentNode) el.parentNode.draggable = false;
+  el.contentEditable = true; el.focus(); getSelection().selectAllChildren(el);
+  el.onblur = () => {
+    el.contentEditable = false; const v = el.textContent.trim();
+    if (v && v !== get()) mut(() => set(v)); else render();
+  };
+  el.onkeydown = e => {
+    if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+    if (e.key === 'Escape') { e.stopPropagation(); el.textContent = get(); el.blur(); }
+  };
+}
+function addCol() {
+  mut(() => T.b.cols.push({title:'New column', desc:'', cards:[]}));
+  const el = [...document.querySelectorAll('.cn')].pop(), c = T.b.cols[T.b.cols.length - 1];
+  if (el) rename(el, () => c.title, v => c.title = v);
+}
+function copyCard(c) {
+  clip = {title:c.title, desc:c.desc};
+  try { navigator.clipboard.writeText('### ' + c.title + '\n\n' + c.desc).catch(() => {}); } catch (e) {}
+}
+
+/* ---------- Rendering ---------- */
+function renderTabs() {
+  $('#tabs').replaceChildren(...tabs.map((t, i) => h('div', {class:'tab' + (i === active ? ' on' : ''), title:t.b.title, onclick:() => activate(i)},
+    t.name + (t.dirty ? ' •' : ''),
+    h('button', {class:'x', title:'Close tab', onclick:e => { e.stopPropagation(); closeTab(i); }}, '×'))));
+}
+function render() {
+  const app = $('#app'); app.replaceChildren(); renderTabs();
+  $('#br').hidden = !pending.length;
+  $('#br').textContent = 'Restore ' + pending.length + ' board' + (pending.length > 1 ? 's' : '') + ' from last session';
+  $('#title').textContent = T ? T.b.title : '';
+  if (!T) {
+    app.append(h('div', {id:'empty'},
+      h('h1', {}, 'Markdown files as Kanban boards'),
+      h('p', {}, '## heading = column, ### heading = card. Everything else is description. Your boards stay plain .md files.'),
+      h('div', {class:'row'}, h('button', {class:'pri', onclick:openFile}, 'Open files'), h('button', {onclick:newBoard}, 'New board')),
+      window.showOpenFilePicker ? '' : h('p', {class:'hint'}, 'This browser cannot write back to files: Save downloads the .md. Boards stay open between visits, but use Chrome, Edge or Brave for autosave to disk.')));
+    return;
+  }
+  const B = T.b, q = $('#q').value.toLowerCase();
+  B.cols.forEach((c, ci) => {
+    const list = h('div', {class:'cards'});
+    c.cards.forEach((k, ki) => {
+      const checks = k.desc.match(/^\s*[-*] \[[ xX]\]/gm) || [], done = checks.filter(x => /[xX]/.test(x)).length;
+      const first = k.desc.split('\n').find(x => x.trim() && !/^\s*[-*] \[[ xX]\]/.test(x)) || '';
+      const meta = [checks.length ? '☑ ' + done + '/' + checks.length : '', first].filter(Boolean).join('  ');
+      const el = h('div', {
+        class:'card' + (q && !(k.title + '\n' + k.desc).toLowerCase().includes(q) ? ' dim' : ''),
+        draggable:true, tabIndex:0,
+        onclick:() => openCard(ci, ki),
+        onkeydown:e => { if (e.key === 'Enter' && e.target === el) openCard(ci, ki); },
+        onmouseenter:() => hov = {ci, ki},
+        onmouseleave:() => hov = null,
+        ondragstart:e => {
+          e.stopPropagation(); drag = {t:'card', ci, ki};
+          e.dataTransfer.setData('text/plain', ''); e.dataTransfer.effectAllowed = 'move';
+          setTimeout(() => el.classList.add('ghost'));
+        },
+        ondragend:() => { drag = null; render(); }
+      }, h('div', {class:'ct'}, k.title), meta ? h('div', {class:'cd'}, meta) : '');
+      list.append(el);
+    });
+    const name = h('span', {class:'cn', ondblclick:e => rename(e.target, () => c.title, v => c.title = v)}, c.title);
+    const head = h('div', {
+      class:'ch', draggable:true,
+      ondragstart:e => { drag = {t:'col', ci}; e.dataTransfer.setData('text/plain', ''); e.dataTransfer.effectAllowed = 'move'; }
+    }, name, h('span', {class:'cnt'}, String(c.cards.length)),
+      h('button', {class:'x', title:'Delete column', onclick:() => {
+        if (!c.cards.length || confirm('Delete column "' + c.title + '" with ' + c.cards.length + ' cards?')) mut(() => B.cols.splice(ci, 1));
+      }}, '×'));
+    const col = h('div', {
+      class:'col',
+      onmouseenter:() => hovCol = ci,
+      onmouseleave:() => hovCol = null,
+      ondragover:e => {
+        if (!drag) return; e.preventDefault();
+        document.querySelectorAll('.dl,.dr').forEach(x => x.classList.remove('dl', 'dr'));
+        if (drag.t === 'col') {
+          const r = col.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2;
+          drop = {ci, after}; col.classList.add(after ? 'dr' : 'dl');
+        } else {
+          const els = [...list.querySelectorAll('.card:not(.ghost)')]; let idx = els.length;
+          for (let i = 0; i < els.length; i++) {
+            const r = els[i].getBoundingClientRect();
+            if (e.clientY < r.top + r.height / 2) { idx = i; break; }
+          }
+          drop = {ci, idx}; list.insertBefore(ph, els[idx] || null);
+        }
+      },
+      ondrop:e => {
+        if (!drag || !drop) return; e.preventDefault();
+        const d = drag, p = drop; drag = null;
+        if (d.t === 'col') {
+          mut(() => { const [m] = B.cols.splice(d.ci, 1); let to = p.ci + (p.after ? 1 : 0); if (d.ci < to) to--; B.cols.splice(to, 0, m); });
+        } else {
+          mut(() => { const [k] = B.cols[d.ci].cards.splice(d.ki, 1); B.cols[p.ci].cards.splice(p.idx, 0, k); });
+        }
+      }
+    }, head, list, h('button', {class:'add', onclick:() => {
+      mut(() => c.cards.push({title:'New card', desc:''})); openCard(ci, c.cards.length - 1, true);
+    }}, '+ Card'));
+    app.append(col);
+  });
+  app.append(h('button', {class:'add addcol', onclick:addCol}, '+ Column'));
+}
+$('#app').addEventListener('dblclick', e => { if (T && e.target.id === 'app') addCol(); });
+
+/* ---------- Card dialog ---------- */
+function openCard(ci, ki, fresh) {
+  const tab = T, k = tab.b.cols[ci].cards[ki], snap = fresh ? tab.undo[tab.undo.length - 1] : ser(tab.b);
+  const t = h('input', {class:'mt', value:k.title, oninput:() => { k.title = t.value; save(); },
+    onkeydown:e => { if (e.key === 'Enter') { e.preventDefault(); d.focus(); } }});
+  const d = h('textarea', {class:'md', value:k.desc, placeholder:'Description (Markdown, e.g. - [ ] task)', oninput:() => { k.desc = d.value; save(); }});
+  const el = h('div', {class:'ov', onmousedown:e => { if (e.target === el) closeModal(); }},
+    h('div', {class:'dlg'}, t, d, h('div', {class:'row'},
+      h('button', {class:'danger', onclick:() => { closeModal(); mut(() => tab.b.cols[ci].cards.splice(ki, 1)); }}, 'Delete'),
+      h('span', {class:'hint'}, 'Esc or Ctrl+Enter closes · changes save automatically'),
+      h('button', {class:'pri', onclick:closeModal}, 'Done'))));
+  document.body.append(el); modal = {el, snap, tab};
+  setTimeout(() => { t.focus(); if (fresh) t.select(); });
+}
+function closeModal() {
+  if (!modal) return; const {el, snap, tab} = modal; modal = null; el.remove();
+  if (ser(tab.b) !== snap) { if (tab.undo[tab.undo.length - 1] !== snap) tab.undo.push(snap); tab.redo = []; }
+  render();
+}
+
+/* ---------- Keyboard ---------- */
+addEventListener('keydown', e => {
+  const mod = e.ctrlKey || e.metaKey, key = e.key.toLowerCase();
+  if (mod && key === 's') { e.preventDefault(); saveNow(); return; }
+  if (mod && key === 'f') { e.preventDefault(); $('#q').focus(); return; }
+  if (modal && (e.key === 'Escape' || (mod && e.key === 'Enter'))) { e.preventDefault(); closeModal(); return; }
+  if (e.key === 'Escape' && ($('#q').value || document.activeElement === $('#q'))) { $('#q').value = ''; $('#q').blur(); render(); return; }
+  if (modal || !T || e.target.closest('input,textarea,[contenteditable=true]')) return;
+  if (mod && key === 'z') { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
+  if (mod && key === 'y') { e.preventDefault(); doRedo(); return; }
+  const B = T.b;
+  if (mod && key === 'v' && clip) {   // paste into hovered column, after hovered card
+    const ci = hov ? hov.ci : hovCol;
+    if (ci != null && B.cols[ci]) { e.preventDefault(); const idx = hov ? hov.ki + 1 : B.cols[ci].cards.length; mut(() => B.cols[ci].cards.splice(idx, 0, {...clip})); }
+    return;
+  }
+  const c = hov && B.cols[hov.ci] && B.cols[hov.ci].cards[hov.ki]; if (!c) return;
+  const {ci, ki} = hov;
+  if (mod && key === 'c' && !getSelection().toString()) { copyCard(c); st('Card copied'); }
+  else if (mod && key === 'x') { copyCard(c); hov = null; mut(() => B.cols[ci].cards.splice(ki, 1)); st('Card cut'); }
+  else if (mod && key === 'd') { e.preventDefault(); mut(() => B.cols[ci].cards.splice(ki + 1, 0, {...c})); }
+  else if (!mod && /^[1-8]$/.test(e.key)) {
+    const f = FLAGS[+e.key - 1];
+    mut(() => c.title = c.title.includes(f) ? c.title.replace(f, '').replace(/\s{2,}/g, ' ').trim() : (c.title + ' ' + f).trim());
+  } else if (e.key === 'Enter') openCard(ci, ki);
+  else if (e.key === 'Delete' || e.key === 'Backspace') { hov = null; mut(() => B.cols[ci].cards.splice(ki, 1)); }
+});
+
+$('#bo').onclick = openFile; $('#bn').onclick = newBoard; $('#bs').onclick = saveNow;
+$('#q').oninput = render;
+$('#title').ondblclick = e => T && rename(e.target, () => T.b.title, v => T.b.title = v);
+render(); restore();
+</script>
+</body>
+</html>
