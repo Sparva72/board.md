@@ -30,7 +30,8 @@ Headings inside code fences are ignored, and headings with four or more `#` stay
 
 - Drag and drop cards and columns
 - Multiple boards in tabs
-- Copy, cut and paste cards between boards
+- Copy, cut and paste cards and columns between boards
+- Drag a card or column onto another board's tab to move it there (a card goes into the column of the same name, else the first column; a column is appended at the end)
 - Search that fades out non-matching cards
 - Colored flags (emoji in the card title)
 - Legend as filter: a line `Farben: 🟥 27.1 · 🟧 26.3 · 🟩 Hardware` in the board description (also `Legende:`, `Legend:`, `Flags:`) becomes a row of filter chips; click one to fade out all cards without that flag
@@ -53,6 +54,7 @@ Card shortcuts apply to the card under the mouse pointer.
 | `1`–`8` | Toggle colored flag |
 | `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copy / cut / paste card (paste goes into the hovered column) |
 | `Ctrl+D` | Duplicate card |
+| `Ctrl+C` / `Ctrl+X` / `Ctrl+D` over a column header | Copy / cut / duplicate the column (`Ctrl+V` pastes it after the hovered column) |
 | `Del` / `Backspace` | Delete card |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
 | `Ctrl+F` | Search |

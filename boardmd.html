@@ -26,6 +26,7 @@ button[hidden]{display:none}
 #tabs{display:flex;gap:2px;padding:6px 12px 0;background:var(--bar);border-bottom:1px solid var(--line);overflow-x:auto}
 #tabs:empty{display:none}
 .tab{display:flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;border:1px solid var(--line);border-bottom:0;border-radius:6px 6px 0 0;background:var(--bg);color:var(--mute);cursor:pointer;white-space:nowrap;margin-bottom:-1px}
+.tab.dt{outline:2px solid var(--acc);color:var(--ink)}
 .tab.on{background:var(--col);color:var(--ink);font-weight:600}
 #app{flex:1;display:flex;gap:12px;padding:12px;overflow-x:auto;align-items:flex-start}
 .col{flex:0 0 280px;max-height:100%;display:flex;flex-direction:column;background:var(--col);border-radius:8px;border:2px solid transparent}
@@ -86,7 +87,7 @@ const $ = s => document.querySelector(s);
 const FLAGS = ['🟥','🟧','🟨','🟩','🟦','🟪','🟫','⬜'];
 const FT = [{description:'Markdown', accept:{'text/markdown':['.md','.markdown','.txt']}}];
 let tabs = [], T = null, active = -1, pending = [];
-let drag = null, drop = null, hov = null, hovCol = null, modal = null, clip = null;
+let drag = null, drop = null, hov = null, hovCol = null, hovHead = null, modal = null, clip = null;
 const ph = document.createElement('div'); ph.className = 'ph';
 
 function h(t, p = {}, ...k) {
@@ -267,8 +268,8 @@ async function newBoard() {
   }
   tabs.push(t); activate(tabs.length - 1); write(t);
 }
-function save() {
-  const t = T; t.dirty = true; st('Unsaved …'); renderTabs();
+function save(t = T) {
+  t.dirty = true; st('Unsaved …'); renderTabs();
   clearTimeout(t.timer); t.timer = setTimeout(() => write(t), 400);
 }
 async function write(t) {
@@ -336,14 +337,41 @@ function addCol() {
   const el = [...document.querySelectorAll('.cn')].pop(), c = T.b.cols[T.b.cols.length - 1];
   if (el) rename(el, () => c.title, v => c.title = v);
 }
+const cloneCol = c => ({title:c.title, desc:c.desc, cards:c.cards.map(k => ({...k}))});
+function copyCol(c) {
+  clip = {t:'col', col:cloneCol(c)};
+  try { navigator.clipboard.writeText(ser({title:'', desc:'', cols:[c]}).replace(/^# \n\n/, '')).catch(() => {}); } catch (e) {}
+}
 function copyCard(c) {
-  clip = {title:c.title, desc:c.desc};
+  clip = {t:'card', title:c.title, desc:c.desc};
   try { navigator.clipboard.writeText('### ' + c.title + '\n\n' + c.desc).catch(() => {}); } catch (e) {}
 }
 
 /* ---------- Rendering ---------- */
+function moveTo(ti) {   // move the dragged card / column into another open board
+  const d = drag, dst = tabs[ti]; drag = null;
+  if (!d || !dst || dst === T) return;
+  const src = T, col = src.b.cols[d.ci]; let msg;
+  dst.undo.push(ser(dst.b)); dst.redo = [];
+  if (d.t === 'col') {
+    dst.b.cols.push(cloneCol(col));
+    mut(() => src.b.cols.splice(d.ci, 1));
+    msg = 'Column moved to ' + dst.name;
+  } else {
+    const k = {...col.cards[d.ki]};
+    let target = dst.b.cols.find(c => norm(c.title) === norm(col.title)) || dst.b.cols[0];
+    if (!target) dst.b.cols.push(target = {title:col.title, desc:'', cards:[]});
+    target.cards.push(k);
+    mut(() => src.b.cols[d.ci].cards.splice(d.ki, 1));
+    msg = 'Card moved to ' + dst.name + ' › ' + target.title;
+  }
+  save(dst); st(msg);
+}
 function renderTabs() {
-  $('#tabs').replaceChildren(...tabs.map((t, i) => h('div', {class:'tab' + (i === active ? ' on' : ''), title:t.b.title, onclick:() => activate(i)},
+  $('#tabs').replaceChildren(...tabs.map((t, i) => h('div', {class:'tab' + (i === active ? ' on' : ''), title:t.b.title, onclick:() => activate(i),
+    ondragover:e => { if (drag && i !== active) { e.preventDefault(); e.currentTarget.classList.add('dt'); } },
+    ondragleave:e => e.currentTarget.classList.remove('dt'),
+    ondrop:e => { if (drag && i !== active) { e.preventDefault(); moveTo(i); } }},
     t.name + (t.dirty ? ' •' : ''),
     h('button', {class:'x', title:'Close tab', onclick:e => { e.stopPropagation(); closeTab(i); }}, '×'))));
 }
@@ -390,6 +418,8 @@ function render() {
     const name = h('span', {class:'cn', ondblclick:e => rename(e.target, () => c.title, v => c.title = v)}, c.title);
     const head = h('div', {
       class:'ch', draggable:true,
+      onmouseenter:() => hovHead = ci,
+      onmouseleave:() => hovHead = null,
       ondragstart:e => { drag = {t:'col', ci}; e.dataTransfer.setData('text/plain', ''); e.dataTransfer.effectAllowed = 'move'; }
     }, name, h('span', {class:'cnt'}, String(c.cards.length)),
       h('button', {class:'x', title:'Archive column to archiv.md', onclick:() => archiveCol(ci)}, '🗄'),
@@ -464,9 +494,22 @@ addEventListener('keydown', e => {
   if (mod && key === 'z') { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
   if (mod && key === 'y') { e.preventDefault(); doRedo(); return; }
   const B = T.b;
-  if (mod && key === 'v' && clip) {   // paste into hovered column, after hovered card
-    const ci = hov ? hov.ci : hovCol;
-    if (ci != null && B.cols[ci]) { e.preventDefault(); const idx = hov ? hov.ki + 1 : B.cols[ci].cards.length; mut(() => B.cols[ci].cards.splice(idx, 0, {...clip})); }
+  if (mod && key === 'v' && clip) {
+    e.preventDefault();
+    if (clip.t === 'col') {   // paste column after the hovered one (or at the end)
+      const at = hovCol != null && B.cols[hovCol] ? hovCol + 1 : B.cols.length;
+      mut(() => B.cols.splice(at, 0, cloneCol(clip.col)));
+    } else {                  // paste card into hovered column, after hovered card
+      const ci = hov ? hov.ci : hovCol;
+      if (ci != null && B.cols[ci]) { const idx = hov ? hov.ki + 1 : B.cols[ci].cards.length; mut(() => B.cols[ci].cards.splice(idx, 0, {title:clip.title, desc:clip.desc})); }
+    }
+    return;
+  }
+  if (hovHead != null && B.cols[hovHead] && mod && 'cxd'.includes(key) && key.length === 1 && !getSelection().toString()) {
+    const ci = hovHead, col = B.cols[ci];
+    if (key === 'c') { copyCol(col); st('Column copied'); }
+    else if (key === 'x') { copyCol(col); hovHead = null; mut(() => B.cols.splice(ci, 1)); st('Column cut'); }
+    else { e.preventDefault(); mut(() => B.cols.splice(ci + 1, 0, cloneCol(col))); }
     return;
   }
   const c = hov && B.cols[hov.ci] && B.cols[hov.ci].cards[hov.ki]; if (!c) return;
