@@ -2,8 +2,6 @@
 
 Use plain Markdown files as Kanban boards. One HTML file, no dependencies, no build step, no server. Your data stays on your machine.
 
-Inspired by [Kanban md](https://kanbanmd.lecaro.me/index.html) by Renan Le Caro (not affiliated).
-
 ![Kanban MD showing the demo board](assets/screenshot_board_md.png)
 
 ## Quick start
