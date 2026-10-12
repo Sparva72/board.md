@@ -44,12 +44,15 @@ button[hidden]{display:none}
 footer{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:5px 12px;background:var(--bar);border-top:1px solid var(--line);font-size:12px;color:var(--mute)}
 footer a{color:var(--mute)}footer a:hover{color:var(--acc)}
 #bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 12px;background:var(--bar);border-bottom:1px solid var(--line);font-size:12px;color:var(--mute)}
+#bar .rp{margin-left:auto;color:var(--mute)}
 #bar:empty{display:none}
 #bar .sep{width:1px;height:16px;background:var(--line);margin:0 4px}
 .chip{padding:2px 8px;border-radius:12px;font-size:12px;white-space:nowrap}
 .chip.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
 .bdg{display:inline-block;font-size:10px;font-weight:700;line-height:15px;padding:0 5px;border-radius:8px;margin-right:5px;border:1px solid var(--mute);color:var(--mute);vertical-align:1px}
 .bdg.e{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.gh{color:var(--acc);text-decoration:none}
+.gh:hover{text-decoration:underline}
 .lk{margin-top:3px;font-size:11px;color:var(--acc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .lk:hover{text-decoration:underline}
 .card.flash{outline:2px solid var(--acc);outline-offset:2px}
@@ -161,10 +164,36 @@ function renderBar() {
     if (kinds.has('V')) bar.append(chip('[V] proposals', f.kind === 'V', () => toggleFilter('kind', 'V')));
   }
   if (f.tag || f.kind) bar.append(chip('✕ clear', false, () => { f.tag = f.kind = null; render(); }));
+  const rp = repoOf(T.b);
+  if (rp) bar.append(h('a', {class:'gh rp', href:'https://github.com/' + rp, target:'_blank', rel:'noopener', title:'Repository for #123 / commit links'}, '⎇ ' + rp));
 }
 function dimmed(k, q) {
   const f = filt(), bd = badge(k);
   return (q && !(k.title + '\n' + k.desc).toLowerCase().includes(q)) || (f.tag && !k.title.includes(f.tag)) || (f.kind && !(bd && bd.kind === f.kind));
+}
+
+/* ---------- GitHub references ---------- */
+function repoOf(b) {   // line like "Repo: owner/name" (or a github URL) in the board description
+  for (const l of b.desc.split('\n')) {
+    const m = l.trim().match(/^(?:repo|repository|github|git):\s*(?:`)?(?:(?:https?:\/\/|git@)?github\.com[:\/])?([\w.-]+\/[\w.-]+?)(?:\.git)?\/?(?:`)?\s*$/i);
+    if (m) return m[1];
+  }
+  return null;
+}
+const REF = /(?<![\w\/#])([\w.-]+\/[\w.-]+)#(\d+)\b|(?<![\w\/#&])#(\d+)\b|(?<![\w#\/-])([0-9a-f]{7,40})(?![\w-])/gi;
+function linkify(text, repo) {   // #123, owner/repo#123 and commit hashes become GitHub links
+  const out = []; let last = 0;
+  for (const m of text.matchAll(REF)) {
+    let url, label = m[0];
+    if (m[1]) url = m[1] + '/issues/' + m[2];
+    else if (m[3]) url = repo && repo + '/issues/' + m[3];
+    else if (repo && /\d/.test(m[4]) && /[a-f]/i.test(m[4])) { url = repo + '/commit/' + m[4]; label = m[4].slice(0, 7); }
+    if (!url) continue;
+    out.push(text.slice(last, m.index), h('a', {class:'gh', href:'https://github.com/' + url, target:'_blank', rel:'noopener',
+      title:'Open on GitHub', onclick:e => e.stopPropagation()}, label));
+    last = m.index + m[0].length;
+  }
+  out.push(text.slice(last)); return out;
 }
 
 /* ---------- Cross-board links ---------- */
@@ -396,7 +425,7 @@ function render() {
       window.showOpenFilePicker ? '' : h('p', {class:'hint'}, 'This browser cannot write back to files: Save downloads the .md. Boards stay open between visits, but use Chrome, Edge or Brave for autosave to disk.')));
     return;
   }
-  const B = T.b, q = $('#q').value.toLowerCase(), ob = otherBoards();
+  const B = T.b, q = $('#q').value.toLowerCase(), ob = otherBoards(), repo = repoOf(B);
   B.cols.forEach((c, ci) => {
     const list = h('div', {class:'cards'});
     c.cards.forEach((k, ki) => {
@@ -417,7 +446,7 @@ function render() {
           setTimeout(() => el.classList.add('ghost'));
         },
         ondragend:() => { drag = null; render(); }
-      }, h('div', {class:'ct'}, k.title), (bd || meta) ? h('div', {class:'cd'}, bd ? h('span', {class:'bdg ' + bd.kind.toLowerCase(), title:bd.raw}, bd.text) : '', meta) : '');
+      }, h('div', {class:'ct'}, ...linkify(k.title, repo)), (bd || meta) ? h('div', {class:'cd'}, bd ? h('span', {class:'bdg ' + bd.kind.toLowerCase(), title:bd.raw}, bd.text) : '', ...linkify(meta, repo)) : '');
       const n = norm(k.title); el.dataset.n = n;
       for (const l of (ob.get(n) || []).slice(0, 3)) el.append(h('div', {class:'lk', title:'Go to this card in ' + tabs[l.ti].name,
         onclick:e => { e.stopPropagation(); gotoCard(l.ti, n); }}, '↔ ' + tabs[l.ti].b.title + ' › ' + l.col));

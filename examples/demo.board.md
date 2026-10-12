@@ -2,6 +2,8 @@
 
 Text under the `#` title is the board description. It is kept in the file but not shown on the board, with one exception: a legend line (below) becomes filter chips.
 
+Repo: redPanther/board.md
+
 Legend: 🟥 Urgent · 🟧 In progress · 🟨 Idea · 🟩 Good · 🟦 Info · 🟪 Design
 
 ## Backlog
@@ -20,6 +22,10 @@ Hover a card and press 1 to 8 to toggle a colored square in the title:
 ### Legend filter 🟨
 
 The `Legend:` line in the board description shows up as chips above the board. Click one to fade out all cards without that flag. Also recognized: `Farben:`, `Legend:`, `Flags:`.
+
+### GitHub references 🟦
+
+Fixes #1, see redPanther/board.md#2 and commit f89d472. Put `Repo: owner/name` in the board description and `#123`, `owner/repo#123` and commit hashes become links to GitHub.
 
 ### Search me
 
