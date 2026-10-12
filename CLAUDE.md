@@ -7,6 +7,7 @@ Kein Build, keine Dependencies, kein Server. Vanilla JS, bewusst minimal halten.
 - `boardmd.html` – die gesamte App (Parser/Serializer, Tabs, Datei-I/O, Rendering, Shortcuts)
 - `examples/` – Beispiel-Boards
 - `assets/` – Screenshot, Icon, Favicon
+- `install.sh` – Linux-Installer (git clone oder zip, legt .desktop-Eintrag an)
 - `README.md` – Format, Shortcuts, Browser-Support
 
 ## Board-Format

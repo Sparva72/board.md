@@ -14,6 +14,16 @@ Inspired by [Kanban md](https://kanbanmd.lecaro.me/index.html) by Renan Le Caro 
 
 Changes are saved to the file automatically. Because boards are plain `.md` files, you can edit them in any text editor, keep them in git, or sync them with tools like Syncthing. Changes made outside the app are picked up within a couple of seconds. If the file changed on disk, the version on disk wins and the app reloads it (unsaved edits in the app are replaced, with a notice in the status bar).
 
+## Install on Linux
+
+One-liner (asks for the install directory, defaults to the current one; uses `git` if available, otherwise downloads the zip, and adds a "Board MD" entry to your application menu):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/redPanther/board.md/main/install.sh | bash
+```
+
+Or from a checkout: `./install.sh`. It installs into `<directory>/board.md` and can be re-run to update. It needs a Chromium-based browser (Chromium, Chrome, Brave or Edge) for the launcher.
+
 ## File format
 
 | Markdown | Meaning |
