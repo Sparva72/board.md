@@ -4,6 +4,8 @@ Use plain Markdown files as Kanban boards. One HTML file, no dependencies, no bu
 
 Inspired by [Kanban md](https://kanbanmd.lecaro.me/index.html) by Renan Le Caro (not affiliated).
 
+![Kanban MD showing the example board](screenshot_board_md.png)
+
 ## Quick start
 
 1. Download `boardmd.html`.
