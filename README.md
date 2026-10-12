@@ -33,6 +33,8 @@ Headings inside code fences are ignored, and headings with four or more `#` stay
 - Copy, cut and paste cards between boards
 - Search that fades out non-matching cards
 - Colored flags (emoji in the card title)
+- Legend as filter: a line `Farben: 🟥 27.1 · 🟧 26.3 · 🟩 Hardware` in the board description (also `Legende:`, `Legend:`, `Flags:`) becomes a row of filter chips; click one to fade out all cards without that flag
+- `[E]` / `[V]` badges: a `[E]`, `[V]` or `[V Coding]` tag in a card description is shown as a badge on the card and can be filtered ("decided" / "proposals")
 - Undo and redo per board
 - Autosave to disk, no save dialog after the first permission prompt
 - Remembers your open boards between visits
