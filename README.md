@@ -4,7 +4,7 @@ Use plain Markdown files as Kanban boards. One HTML file, no dependencies, no bu
 
 Inspired by [Kanban md](https://kanbanmd.lecaro.me/index.html) by Renan Le Caro (not affiliated).
 
-![Kanban MD showing the example board](screenshot_board_md.png)
+![Kanban MD showing the example board](assets/screenshot_board_md.png)
 
 ## Quick start
 
@@ -24,7 +24,7 @@ Changes are saved to the file automatically. Because boards are plain `.md` file
 | Text below a heading | Description (shown as a one-line preview on cards) |
 | `- [ ]` / `- [x]` | Checklist, shown as progress (e.g. ☑ 2/4) on the card |
 
-Headings inside code fences are ignored, and headings with four or more `#` stay part of the card description. Text under the board title and column headings is preserved in the file. See [`board.md`](board.md) for an example.
+Headings inside code fences are ignored, and headings with four or more `#` stay part of the card description. Text under the board title and column headings is preserved in the file. See [`examples/example_board.md`](examples/example_board.md) for an example.
 
 ## Features
 
@@ -89,7 +89,7 @@ To add it to your application menu, create `~/.local/share/applications/boardmd.
 Type=Application
 Name=Kanban MD
 Exec=chromium --app=file:///path/to/board.html
-Icon=/path/to/boardmd.svg
+Icon=/path/to/assets/boardmd.svg
 Terminal=false
 Categories=Office;ProjectManagement;
 ```
