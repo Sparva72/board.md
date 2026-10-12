@@ -12,7 +12,7 @@ Inspired by [Kanban md](https://kanbanmd.lecaro.me/index.html) by Renan Le Caro 
 2. Open it in Chrome, Edge, Brave or another Chromium browser.
 3. Click **Open** and pick a `.md` file, or **New** to start a board.
 
-Changes are saved to the file automatically. Because boards are plain `.md` files, you can edit them in any text editor, keep them in git, or sync them with tools like Syncthing. Changes made outside the app are picked up when you switch back to the window.
+Changes are saved to the file automatically. Because boards are plain `.md` files, you can edit them in any text editor, keep them in git, or sync them with tools like Syncthing. Changes made outside the app are picked up within a couple of seconds. If the file changed on disk, the version on disk wins and the app reloads it (unsaved edits in the app are replaced, with a notice in the status bar).
 
 ## File format
 

@@ -198,11 +198,29 @@ function save() {
 }
 async function write(t) {
   if (!t.h) { if (t === T) st('Not on disk – Save downloads the .md'); persist(); return; }
+  if (await checkExt(t)) return;   // file changed on disk: external version wins
+  t.busy = true;
   try {
     const w = await t.h.createWritable(); await w.write(ser(t.b)); await w.close();
     t.mod = (await t.h.getFile()).lastModified; t.dirty = false; if (t === T) st('Saved');
   } catch (e) { st('Error: ' + e.message); }
+  t.busy = false;
   renderTabs();
+}
+async function reloadExt(t, f) {
+  const lost = t.dirty;
+  clearTimeout(t.timer);
+  t.mod = f.lastModified; t.b = parse(await f.text()); t.undo = []; t.redo = []; t.dirty = false;
+  if (modal && modal.tab === t) { modal.el.remove(); modal = null; }
+  if (t === T) { render(); st(lost ? 'Changed on disk – your unsaved edits were replaced' : 'Reloaded from disk'); } else renderTabs();
+}
+async function checkExt(t) {   // true if the file on disk was newer and has been loaded
+  if (!t.h || !t.mod || t.busy) return false;
+  try {
+    const f = await t.h.getFile();
+    if (f.lastModified !== t.mod) { await reloadExt(t, f); return true; }
+  } catch (e) {}
+  return false;
 }
 async function saveNow() {
   if (!T) return;
@@ -214,16 +232,12 @@ async function saveNow() {
   const a = h('a', {href:URL.createObjectURL(new Blob([ser(T.b)], {type:'text/markdown'})), download:T.name});
   a.click(); URL.revokeObjectURL(a.href); T.dirty = false; st('Downloaded'); renderTabs();
 }
-addEventListener('focus', async () => {   // pick up external changes (e.g. Syncthing)
+async function checkAll() {   // pick up external changes (e.g. Claude, Syncthing)
   if (modal) return;
-  for (const t of tabs) {
-    if (!t.h || t.dirty) continue;
-    try {
-      const f = await t.h.getFile();
-      if (f.lastModified > t.mod) { t.mod = f.lastModified; t.b = parse(await f.text()); t.undo = []; t.redo = []; if (t === T) { render(); st('Reloaded from disk'); } }
-    } catch (e) {}
-  }
-});
+  for (const t of tabs) await checkExt(t);
+}
+addEventListener('focus', checkAll);
+setInterval(() => { if (!document.hidden) checkAll(); }, 2000);
 addEventListener('beforeunload', e => { if (tabs.some(t => t.dirty)) e.preventDefault(); });
 
 /* ---------- Mutations / undo ---------- */
