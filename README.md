@@ -4,7 +4,7 @@ Use plain Markdown files as Kanban boards. One HTML file, no dependencies, no bu
 
 Inspired by [Kanban md](https://kanbanmd.lecaro.me/index.html) by Renan Le Caro (not affiliated).
 
-![Kanban MD showing the example board](assets/screenshot_board_md.png)
+![Kanban MD showing the demo board](assets/screenshot_board_md.png)
 
 ## Quick start
 
@@ -24,7 +24,7 @@ Changes are saved to the file automatically. Because boards are plain `.md` file
 | Text below a heading | Description (shown as a one-line preview on cards) |
 | `- [ ]` / `- [x]` | Checklist, shown as progress (e.g. ☑ 2/4) on the card |
 
-Headings inside code fences are ignored, and headings with four or more `#` stay part of the card description. Text under the board title and column headings is preserved in the file. See [`examples/example_board.md`](examples/example_board.md) for an example.
+Headings inside code fences are ignored, and headings with four or more `#` stay part of the card description. Text under the board title and column headings is preserved in the file. See [`examples/demo.board.md`](examples/demo.board.md) for an example.
 
 ## Features
 
@@ -105,4 +105,4 @@ Replace `chromium` with `google-chrome-stable`, `chromium-browser` as needed. Ad
 
 ## License
 
-GLP-3.0, see `LICENSE`. Change this to whatever you prefer.
+GPL-3.0, see `LICENSE`.
