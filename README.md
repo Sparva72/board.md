@@ -73,7 +73,7 @@ Colors are plain emoji characters in the card title, so they live in the `.md` f
 - Undo and redo per board
 - Autosave to disk, no save dialog after the first permission prompt
 - Remembers your open boards between visits
-- Light and dark theme, follows the system setting
+- Light and dark theme: follows the system setting, the ☾/☀ button in the header overrides it (remembered per browser)
 
 ## Shortcuts
 

@@ -7,7 +7,9 @@
 <title>Board MD</title>
 <style>
 :root{--bg:#e8ecef;--col:#d9dfe4;--card:#fff;--ink:#1b2430;--mute:#66727f;--line:#c3ccd4;--acc:#2d5f8b;--acc-ink:#fff;--bar:#f6f8f9}
-@media(prefers-color-scheme:dark){:root{--bg:#13181d;--col:#1c232a;--card:#262f38;--ink:#e4e9ee;--mute:#8b98a5;--line:#35414c;--acc:#6aa5d6;--acc-ink:#0f1620;--bar:#1a2127}}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#13181d;--col:#1c232a;--card:#262f38;--ink:#e4e9ee;--mute:#8b98a5;--line:#35414c;--acc:#6aa5d6;--acc-ink:#0f1620;--bar:#1a2127}}
+:root[data-theme=dark]{--bg:#13181d;--col:#1c232a;--card:#262f38;--ink:#e4e9ee;--mute:#8b98a5;--line:#35414c;--acc:#6aa5d6;--acc-ink:#0f1620;--bar:#1a2127}
+:root[data-theme=light]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -88,6 +90,7 @@ kbd{font:12px ui-monospace,monospace;background:var(--bar);border:1px solid var(
   <span id="title"></span>
   <input id="q" type="search" placeholder="Search (Ctrl+F)">
   <span id="st"></span>
+  <button id="bt" title="Toggle dark mode"></button>
   <button id="bh" title="Help (?)">?</button>
 </header>
 <div id="tabs"></div>
@@ -528,6 +531,17 @@ function closeModal() {
   if (ser(tab.b) !== snap) { if (tab.undo[tab.undo.length - 1] !== snap) tab.undo.push(snap); tab.redo = []; }
   render();
 }
+
+/* ---------- Theme ---------- */
+const darkNow = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme:dark)').matches;
+function setTheme(th) {
+  document.documentElement.dataset.theme = th;
+  $('#bt').textContent = th === 'dark' ? '☀' : '☾';
+  try { localStorage.setItem('boardmd-theme', th); } catch (e) {}
+}
+try { const th = localStorage.getItem('boardmd-theme'); if (th === 'dark' || th === 'light') document.documentElement.dataset.theme = th; } catch (e) {}
+$('#bt').textContent = darkNow() ? '☀' : '☾';
+$('#bt').onclick = () => setTheme(darkNow() ? 'light' : 'dark');
 
 /* ---------- Help ---------- */
 const HELP = [
