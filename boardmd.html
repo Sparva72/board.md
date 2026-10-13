@@ -69,6 +69,13 @@ footer a{color:var(--mute)}footer a:hover{color:var(--acc)}
 .dlg{background:var(--card);border-radius:10px;width:min(680px,100%);max-height:90vh;display:flex;flex-direction:column;gap:8px;padding:14px}
 .mt{font-size:17px;font-weight:600;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
 .md{flex:1;min-height:280px;resize:vertical;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font:13px/1.5 ui-monospace,Menlo,Consolas,monospace}
+.trow{display:flex;gap:6px}.trow .mt{flex:1;min-width:0}
+.emo{position:relative}
+.emo .pop{position:absolute;right:0;top:100%;margin-top:4px;z-index:5;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px;box-shadow:0 4px 16px #0004;display:grid;grid-template-columns:repeat(8,34px);gap:2px}
+.emo .pop button{padding:3px 0;font-size:18px;border-color:transparent;background:none}
+.emo .pop button:hover{background:var(--bar);border-color:var(--line)}
+.emo .pop button.on{background:var(--bar);border-color:var(--acc)}
+.emo .pop hr{grid-column:1/-1;width:100%;border:0;border-top:1px solid var(--line);margin:3px 0}
 .dlg .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .hint{color:var(--mute);font-size:12px}
 .hlp{overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:4px 24px}
@@ -513,13 +520,32 @@ function render() {
 $('#app').addEventListener('dblclick', e => { if (T && e.target.id === 'app') addCol(); });
 
 /* ---------- Card dialog ---------- */
+const EMOJI = ['✅','❌','⚠️','🔥','🐛','💡','❓','❗','⭐','🚧','📌','🔒','🔧','📝','🧪','🚀','⏱','🔍','📦','🎨','💬','👀','👍','🏁','→','←','↑','↓','⇒','✔','✘','…'];
+function emojiPicker(tab, k, t, getField) {
+  let pop = null;
+  const insert = em => {
+    const f = getField(); f.focus();
+    f.setRangeText(em, f.selectionStart, f.selectionEnd, 'end'); f.dispatchEvent(new Event('input'));
+  };
+  const flag = fl => { k.title = k.title.includes(fl) ? k.title.replace(fl, '').replace(/\s{2,}/g, ' ').trim() : (k.title + ' ' + fl).trim(); t.value = k.title; save(); };
+  const btn = h('button', {title:'Insert emoji', type:'button', onmousedown:e => e.preventDefault(), onclick:() => {
+    if (pop) { pop.remove(); pop = null; return; }
+    const lg = legend(tab.b), key = (e, fn, title, on) => h('button', {type:'button', title, class:on ? 'on' : '', onmousedown:e => e.preventDefault(), onclick:fn}, e);
+    pop = h('div', {class:'pop'},
+      ...FLAGS.map((fl, i) => { const lb = lg.find(x => x.tag === fl); const b = key(fl, () => { flag(fl); b.className = k.title.includes(fl) ? 'on' : ''; }, (i + 1) + ' · toggle flag' + (lb ? ' · ' + lb.label : ''), k.title.includes(fl)); return b; }),
+      h('hr'), ...EMOJI.map(em => key(em, () => insert(em), em)));
+    btn.parentNode.append(pop);
+  }}, '😀');
+  return h('span', {class:'emo'}, btn);
+}
 function openCard(ci, ki, fresh) {
   const tab = T, k = tab.b.cols[ci].cards[ki], snap = fresh ? tab.undo[tab.undo.length - 1] : ser(tab.b);
   const t = h('input', {class:'mt', value:k.title, oninput:() => { k.title = t.value; save(); },
     onkeydown:e => { if (e.key === 'Enter') { e.preventDefault(); d.focus(); } }});
   const d = h('textarea', {class:'md', value:k.desc, placeholder:'Description (Markdown, e.g. - [ ] task)', oninput:() => { k.desc = d.value; save(); }});
+  let last = t; t.addEventListener('focus', () => last = t); d.addEventListener('focus', () => last = d);
   const el = h('div', {class:'ov', onmousedown:e => { if (e.target === el) closeModal(); }},
-    h('div', {class:'dlg'}, t, d, h('div', {class:'row'},
+    h('div', {class:'dlg'}, h('div', {class:'trow'}, t, emojiPicker(tab, k, t, () => last)), d, h('div', {class:'row'},
       h('button', {class:'danger', onclick:() => { closeModal(); mut(() => tab.b.cols[ci].cards.splice(ki, 1)); }}, 'Delete'),
       h('span', {class:'hint'}, 'Esc or Ctrl+Enter closes · changes save automatically'),
       h('button', {class:'pri', onclick:closeModal}, 'Done'))));
@@ -553,7 +579,9 @@ const HELP = [
     ['Double-click background', 'New column'], ['Double-click title', 'Rename column or board']]],
   ['General', [
     ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / redo'], ['Ctrl+F', 'Search'], ['Ctrl+S', 'Save now'],
-    ['Esc / Ctrl+Enter', 'Close card or help, clear search'], ['?', 'This help']]],
+    ['Esc / Ctrl+Enter', 'Close card or help, clear search'], ['?', 'This help'],
+    ['😀 in the card dialog', 'Emoji picker: flags and common symbols'],
+    ['Win+. / Ctrl+. / Ctrl+Cmd+Space', 'System emoji picker (all emojis)']]],
   ['Mouse', [
     ['Drag a card or column', 'Move it'], ['Drop onto a tab', 'Move to another open board'],
     ['Click a legend chip / E / V', 'Dim everything else']]],

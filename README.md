@@ -73,6 +73,7 @@ Colors are plain emoji characters in the card title, so they live in the `.md` f
 - Undo and redo per board
 - Autosave to disk, no save dialog after the first permission prompt
 - Remembers your open boards between visits
+- Emoji picker (😀) in the card dialog: toggles the color flags (with the meaning from your `Farben:` line as tooltip) and inserts common symbols at the cursor. For any other emoji use the system picker: `Win+.` (Windows), `Ctrl+Cmd+Space` (macOS), `Ctrl+.` or `Ctrl+;` (Linux), or the right-click menu
 - Light and dark theme: follows the system setting, the ☾/☀ button in the header overrides it (remembered per browser)
 
 ## Shortcuts
