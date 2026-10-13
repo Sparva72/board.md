@@ -91,6 +91,7 @@ Card shortcuts apply to the card under the mouse pointer.
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
 | `Ctrl+F` | Search |
 | `Ctrl+S` | Save now |
+| `?` | Show the built-in help (also the **?** button in the header and the **Help** link in the footer) |
 | Double-click background | New column |
 | Double-click a title | Rename column or board |
 

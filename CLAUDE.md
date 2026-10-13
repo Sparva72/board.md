@@ -21,4 +21,5 @@ Flags sind Emoji im Kartentitel. Headings in Code-Fences werden ignoriert, `####
 
 ## Konventionen
 - README aktuell halten, wenn sich Features/Shortcuts ändern.
+- Die In-App-Hilfe (`HELP`-Liste in `boardmd.html`, Taste `?`) ebenfalls mitpflegen – Shortcuts stehen dort und in der README.
 - Sprache der UI: Englisch. Kommunikation mit Sarah: Deutsch.

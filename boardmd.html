@@ -69,6 +69,13 @@ footer a{color:var(--mute)}footer a:hover{color:var(--acc)}
 .md{flex:1;min-height:280px;resize:vertical;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font:13px/1.5 ui-monospace,Menlo,Consolas,monospace}
 .dlg .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .hint{color:var(--mute);font-size:12px}
+.hlp{overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:4px 24px}
+.hlp h3{margin:10px 0 4px;font-size:13px}
+.hlp dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:13px}
+.hlp dt{overflow-wrap:anywhere}
+.hlp dd{margin:0;color:var(--mute)}
+@media(max-width:560px){.hlp dl{grid-template-columns:1fr}.hlp dd{margin-bottom:4px}}
+kbd{font:12px ui-monospace,monospace;background:var(--bar);border:1px solid var(--line);border-radius:4px;padding:0 4px}
 </style>
 </head>
 <body>
@@ -81,12 +88,14 @@ footer a{color:var(--mute)}footer a:hover{color:var(--acc)}
   <span id="title"></span>
   <input id="q" type="search" placeholder="Search (Ctrl+F)">
   <span id="st"></span>
+  <button id="bh" title="Help (?)">?</button>
 </header>
 <div id="tabs"></div>
 <div id="bar"></div>
 <main id="app"></main>
 <footer>
   <span>Board MD</span>·
+  <a href="#" id="fh">Help</a>·
   <a href="https://github.com/redPanther/board.md" target="_blank" rel="noopener">GitHub</a>·
   <a href="https://github.com/redPanther/board.md/blob/main/LICENSE" target="_blank" rel="noopener">GPL-3.0</a>·
   <span>Your boards stay plain .md files on your machine</span>
@@ -520,10 +529,45 @@ function closeModal() {
   render();
 }
 
+/* ---------- Help ---------- */
+const HELP = [
+  ['Cards (under the mouse pointer)', [
+    ['Enter / click', 'Open card'], ['1–8', 'Toggle colored flag'],
+    ['Ctrl+C / X / V', 'Copy / cut / paste card'], ['Ctrl+D', 'Duplicate card'], ['Del', 'Delete card']]],
+  ['Columns', [
+    ['Ctrl+C / X / D on header', 'Copy / cut / duplicate column'], ['Ctrl+V', 'Paste column after hovered one'],
+    ['Double-click background', 'New column'], ['Double-click title', 'Rename column or board']]],
+  ['General', [
+    ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / redo'], ['Ctrl+F', 'Search'], ['Ctrl+S', 'Save now'],
+    ['Esc / Ctrl+Enter', 'Close card or help, clear search'], ['?', 'This help']]],
+  ['Mouse', [
+    ['Drag a card or column', 'Move it'], ['Drop onto a tab', 'Move to another open board'],
+    ['Click a legend chip / E / V', 'Dim everything else']]],
+  ['In the .md file', [
+    ['[E] / [V]', 'Badge at the start of a card text: decided / proposal'],
+    ['Farben: 🟥 text · 🟧 text', 'Legend line in the board description'],
+    ['Repo: owner/name', 'Makes #12, owner/repo#12 and commit hashes GitHub links'],
+    ['Title of a card on another board', 'Mention it to get a jump link (both boards open)']]],
+];
+let help = null;
+function toggleHelp() {
+  if (help) { help.remove(); help = null; return; }
+  if (modal) return;
+  const body = h('div', {class:'hlp'}, ...HELP.map(([t, rows]) => h('div', {}, h('h3', {}, t),
+    h('dl', {}, ...rows.flatMap(([k, v]) => [h('dt', {}, h('kbd', {}, k)), h('dd', {}, v)])))));
+  help = h('div', {class:'ov', onmousedown:e => { if (e.target === help) toggleHelp(); }},
+    h('div', {class:'dlg'}, h('b', {}, 'Board MD – help'), body, h('div', {class:'row'},
+      h('a', {class:'hint', href:'https://github.com/redPanther/board.md#readme', target:'_blank', rel:'noopener'}, 'Full documentation on GitHub'),
+      h('button', {class:'pri', onclick:toggleHelp}, 'Close'))));
+  document.body.append(help);
+}
+
 /* ---------- Keyboard ---------- */
 addEventListener('keydown', e => {
   const mod = e.ctrlKey || e.metaKey, key = e.key.toLowerCase();
+  if (e.key === '?' && !modal && !e.target.closest('input,textarea,[contenteditable=true]')) { e.preventDefault(); toggleHelp(); return; }
   if (mod && key === 's') { e.preventDefault(); saveNow(); return; }
+  if (help) { if (e.key === 'Escape' || e.key === '?') { e.preventDefault(); toggleHelp(); } return; }
   if (mod && key === 'f') { e.preventDefault(); $('#q').focus(); return; }
   if (modal && (e.key === 'Escape' || (mod && e.key === 'Enter'))) { e.preventDefault(); closeModal(); return; }
   if (e.key === 'Escape' && ($('#q').value || document.activeElement === $('#q'))) { $('#q').value = ''; $('#q').blur(); render(); return; }
@@ -561,6 +605,7 @@ addEventListener('keydown', e => {
   else if (e.key === 'Delete' || e.key === 'Backspace') { hov = null; mut(() => B.cols[ci].cards.splice(ki, 1)); }
 });
 
+$('#bh').onclick = toggleHelp; $('#fh').onclick = e => { e.preventDefault(); toggleHelp(); };
 $('#bo').onclick = openFile; $('#bn').onclick = newBoard; $('#bs').onclick = saveNow;
 $('#q').oninput = render;
 $('#title').ondblclick = e => T && rename(e.target, () => T.b.title, v => T.b.title = v);
