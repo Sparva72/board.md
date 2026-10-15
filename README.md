@@ -66,6 +66,7 @@ Colors are plain emoji characters in the card title, so they live in the `.md` f
 - Search that fades out non-matching cards
 - Colored flags (emoji in the card title)
 - Legend as filter: a line `Farben: 🟥 27.1 · 🟧 26.3 · 🟩 Hardware` in the board description (also `Legende:`, `Legend:`, `Flags:`) becomes a row of filter chips; click one to fade out all cards without that flag
+- Hide flags: right-click a legend chip to hide all cards with that flag (e.g. finished ones); the chip gets struck through and each column shows `n hidden`, click it to peek. Right-click again to show them for good. Works for any flag, is remembered per board name in the browser, and a search still finds hidden cards. The file is never changed.
 - GitHub links: put a line `Repo: owner/name` (also `GitHub:`, a github.com URL works too) in the board description. Then `#123`, `owner/repo#123` and commit hashes (7–40 hex characters) in card titles and previews link to GitHub. `owner/repo#123` works without a `Repo:` line. The repo is shown at the right of the filter bar
 - `[E]` / `[V]` badges: a `[E]`, `[V]` or `[V Coding]` tag in a card description is shown as a badge on the card and can be filtered ("decided" / "proposals")
 - Archive a column (🗄 in the column header): it is appended to an `archiv.md` file (picked once, then remembered) and removed from the board. The archive is a normal board file; undo only restores the column in the board, not in the archive

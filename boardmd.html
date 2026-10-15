@@ -50,6 +50,8 @@ footer a{color:var(--mute)}footer a:hover{color:var(--acc)}
 #bar:empty{display:none}
 #bar .sep{width:1px;height:16px;background:var(--line);margin:0 4px}
 .chip{padding:2px 8px;border-radius:12px;font-size:12px;white-space:nowrap}
+.chip.off{text-decoration:line-through;opacity:.6}
+.hid{cursor:pointer;text-decoration:underline dotted}
 .chip.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
 .bdg{display:inline-block;font-size:10px;font-weight:700;line-height:15px;padding:0 5px;border-radius:8px;margin-right:5px;border:1px solid var(--mute);color:var(--mute);vertical-align:1px}
 .bdg.e{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
@@ -170,18 +172,30 @@ function legend(b) {   // line like "Farben: 🟥 27.1 · 🟧 26.3" in the boar
     .map(x => { const m = x.match(/^(\S+)\s*(.*)$/); return {tag:m[1], label:m[2]}; });
 }
 const badge = k => { const m = k.desc.match(BADGE); return m ? {kind:m[1], text:(m[1] + m[2]).trim(), raw:m[0]} : null; };
-const filt = () => T.f || (T.f = {tag:null, kind:null});
+const HKEY = 'boardmd-hide';   // hidden legend flags per board name, remembered per browser
+const hideStore = () => { try { return JSON.parse(localStorage.getItem(HKEY)) || {}; } catch (e) { return {}; } };
+const filt = () => T.f || (T.f = {tag:null, kind:null, peek:false, hide:hideStore()[T.name] || []});
+function toggleHide(tag) {
+  const f = filt(); f.hide = f.hide.includes(tag) ? f.hide.filter(x => x !== tag) : [...f.hide, tag]; f.peek = false;
+  try { const o = hideStore(); if (f.hide.length) o[T.name] = f.hide; else delete o[T.name]; localStorage.setItem(HKEY, JSON.stringify(o)); } catch (e) {}
+  render();
+}
+const hidden0 = k => { const f = filt(); return f.peek && f.hide.some(t => k.title.includes(t)); };
+const hidden = (k, q) => { const f = filt(); return !q && !f.peek && f.hide.some(t => k.title.includes(t)); };
 function toggleFilter(key, val) { const f = filt(); f[key] = f[key] === val ? null : val; render(); }
 function renderBar() {
   const bar = $('#bar'); bar.replaceChildren(); if (!T) return;
-  const f = filt(), chip = (txt, on, fn, title) => h('button', {class:'chip' + (on ? ' on' : ''), title, onclick:fn}, txt);
+  const f = filt(), chip = (txt, on, fn, title, off, ctx) => h('button', {class:'chip' + (on ? ' on' : '') + (off ? ' off' : ''), title, onclick:fn, oncontextmenu:ctx}, txt);
   const lg = legend(T.b), kinds = new Set(T.b.cols.flatMap(c => c.cards.map(badge).filter(Boolean).map(x => x.kind)));
-  if (lg.length) bar.append('Filter:', ...lg.map(x => chip(x.tag + ' ' + x.label, f.tag === x.tag, () => toggleFilter('tag', x.tag), 'Show only cards with ' + x.tag)));
+  if (lg.length) bar.append('Filter:', ...lg.map(x => chip(x.tag + ' ' + x.label, f.tag === x.tag, () => toggleFilter('tag', x.tag),
+    f.hide.includes(x.tag) ? 'Hidden – right-click to show again' : 'Click: show only cards with ' + x.tag + ' · Right-click: hide them',
+    f.hide.includes(x.tag), e => { e.preventDefault(); toggleHide(x.tag); })));
   if (kinds.size) {
     if (lg.length) bar.append(h('span', {class:'sep'}));
     if (kinds.has('E')) bar.append(chip('[E] decided', f.kind === 'E', () => toggleFilter('kind', 'E')));
     if (kinds.has('V')) bar.append(chip('[V] proposals', f.kind === 'V', () => toggleFilter('kind', 'V')));
   }
+  if (f.peek && f.hide.length) bar.append(chip('🙈 hide again', false, () => { f.peek = false; render(); }));
   if (f.tag || f.kind) bar.append(chip('✕ clear', false, () => { f.tag = f.kind = null; render(); }));
   const rp = repoOf(T.b);
   if (rp) bar.append(h('a', {class:'gh rp', href:'https://github.com/' + rp, target:'_blank', rel:'noopener', title:'Repository for #123 / commit links'}, '⎇ ' + rp));
@@ -446,14 +460,15 @@ function render() {
   }
   const B = T.b, q = $('#q').value.toLowerCase(), ob = otherBoards(), repo = repoOf(B);
   B.cols.forEach((c, ci) => {
-    const list = h('div', {class:'cards'});
+    const list = h('div', {class:'cards'}); let nh = 0;
     c.cards.forEach((k, ki) => {
       const checks = k.desc.match(/^\s*[-*] \[[ xX]\]/gm) || [], done = checks.filter(x => /[xX]/.test(x)).length;
+      if (hidden(k, q)) { nh++; return; }
       const bd = badge(k);
       const first = (k.desc.split('\n').find(x => x.trim() && !/^\s*[-*] \[[ xX]\]/.test(x)) || '').replace(BADGE, '').trim();
       const meta = [checks.length ? '☑ ' + done + '/' + checks.length : '', first].filter(Boolean).join('  ');
       const el = h('div', {
-        class:'card' + (dimmed(k, q) ? ' dim' : ''),
+        class:'card' + (dimmed(k, q) || hidden0(k) ? ' dim' : ''),
         draggable:true, tabIndex:0,
         onclick:() => openCard(ci, ki),
         onkeydown:e => { if (e.key === 'Enter' && e.target === el) openCard(ci, ki); },
@@ -466,7 +481,7 @@ function render() {
         },
         ondragend:() => { drag = null; render(); }
       }, h('div', {class:'ct'}, ...linkify(k.title, repo)), (bd || meta) ? h('div', {class:'cd'}, bd ? h('span', {class:'bdg ' + bd.kind.toLowerCase(), title:bd.raw}, bd.text) : '', ...linkify(meta, repo)) : '');
-      const n = norm(k.title); el.dataset.n = n;
+      const n = norm(k.title); el.dataset.n = n; el.dataset.ki = ki;
       for (const l of (ob.get(n) || []).slice(0, 3)) el.append(h('div', {class:'lk', title:'Go to this card in ' + tabs[l.ti].name,
         onclick:e => { e.stopPropagation(); gotoCard(l.ti, n); }}, '↔ ' + tabs[l.ti].b.title + ' › ' + l.col));
       list.append(el);
@@ -477,7 +492,7 @@ function render() {
       onmouseenter:() => hovHead = ci,
       onmouseleave:() => hovHead = null,
       ondragstart:e => { drag = {t:'col', ci}; e.dataTransfer.setData('text/plain', ''); e.dataTransfer.effectAllowed = 'move'; }
-    }, name, h('span', {class:'cnt'}, String(c.cards.length)),
+    }, name, h('span', {class:'cnt'}, String(c.cards.length), nh ? h('span', {class:'hid', title:'Show hidden cards', onclick:() => { filt().peek = true; render(); }}, ' · ' + nh + ' hidden') : ''),
       h('button', {class:'x', title:'Archive column to archiv.md', onclick:() => archiveCol(ci)}, '🗄'),
       h('button', {class:'x', title:'Delete column', onclick:() => {
         if (!c.cards.length || confirm('Delete column "' + c.title + '" with ' + c.cards.length + ' cards?')) mut(() => B.cols.splice(ci, 1));
@@ -498,12 +513,13 @@ function render() {
             const r = els[i].getBoundingClientRect();
             if (e.clientY < r.top + r.height / 2) { idx = i; break; }
           }
-          drop = {ci, idx}; list.insertBefore(ph, els[idx] || null);
+          drop = {ci, idx:els[idx] ? +els[idx].dataset.ki : c.cards.length}; list.insertBefore(ph, els[idx] || null);
         }
       },
       ondrop:e => {
         if (!drag || !drop) return; e.preventDefault();
         const d = drag, p = drop; drag = null;
+        if (d.t === 'card' && d.ci === p.ci && p.idx > d.ki) p.idx--;
         if (d.t === 'col') {
           mut(() => { const [m] = B.cols.splice(d.ci, 1); let to = p.ci + (p.after ? 1 : 0); if (d.ci < to) to--; B.cols.splice(to, 0, m); });
         } else {
@@ -584,7 +600,8 @@ const HELP = [
     ['Win+. / Ctrl+. / Ctrl+Cmd+Space', 'System emoji picker (all emojis)']]],
   ['Mouse', [
     ['Drag a card or column', 'Move it'], ['Drop onto a tab', 'Move to another open board'],
-    ['Click a legend chip / E / V', 'Dim everything else']]],
+    ['Click a legend chip / E / V', 'Dim everything else'],
+    ['Right-click a legend chip', 'Hide all cards with that flag (again: show); "n hidden" in a column header shows them']]],
   ['In the .md file', [
     ['[E] / [V]', 'Badge at the start of a card text: decided / proposal'],
     ['Farben: 🟥 text · 🟧 text', 'Legend line in the board description'],
