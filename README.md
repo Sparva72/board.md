@@ -4,6 +4,8 @@ Use plain Markdown files as Kanban boards. One HTML file, no dependencies, no bu
 
 ![Kanban MD showing the demo board](assets/screenshot_board_md.png)
 
+**[Try it online](https://redpanther.github.io/board.md/)** – the app runs entirely in your browser; [download the demo board](https://redpanther.github.io/board.md/examples/demo.board.md) and open it there.
+
 ## Quick start
 
 1. Download `boardmd.html`.
