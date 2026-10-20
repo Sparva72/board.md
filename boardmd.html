@@ -87,6 +87,18 @@ footer a{color:var(--mute)}footer a:hover{color:var(--acc)}
 .hlp dd{margin:0;color:var(--mute)}
 @media(max-width:560px){.hlp dl{grid-template-columns:1fr}.hlp dd{margin-bottom:4px}}
 kbd{font:12px ui-monospace,monospace;background:var(--bar);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+/* Calendar styles are scoped to the added calendar view and editor. */
+.calendar-wrap{width:100%;max-width:1400px;margin:0 auto;overflow-x:auto}
+.calendar-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.calendar-toolbar h2{font-size:20px;margin:0 8px}.calendar-toolbar .pri{margin-left:auto}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:630px;border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.calendar-weekday,.calendar-day{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px}
+.calendar-weekday{background:var(--bar);color:var(--mute)}.calendar-day{min-height:100px;background:var(--card);overflow:hidden}
+.calendar-day.outside{background:var(--bg)}.calendar-date{background:none;border:0;margin-bottom:4px;padding:3px 6px}
+.calendar-day.today .calendar-date{background:var(--acc);color:var(--acc-ink);border-radius:50%}
+.calendar-event{display:block;width:100%;text-align:left;font-size:12px;padding:3px 5px;margin:3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:3px solid var(--acc)}
+.calendar-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.calendar-list h3{width:100%;margin:0}
+.calendar-editor{display:grid;gap:12px}.calendar-editor label{display:grid;gap:4px}.calendar-editor input,.calendar-editor select{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;min-width:0}.calendar-error{color:#c0392b}
 </style>
 </head>
 <body>
@@ -94,6 +106,7 @@ kbd{font:12px ui-monospace,monospace;background:var(--bar);border:1px solid var(
   <b>Board MD</b>
   <button id="bo">Open</button>
   <button id="bn">New</button>
+  <button id="bc">Calender</button>
   <button id="bs">Save</button>
   <button id="br" class="pri" hidden></button>
   <span id="title"></span>
@@ -112,12 +125,14 @@ kbd{font:12px ui-monospace,monospace;background:var(--bar);border:1px solid var(
   <a href="https://github.com/redPanther/board.md/blob/main/LICENSE" target="_blank" rel="noopener">GPL-3.0</a>·
   <span>Your boards stay plain .md files on your machine</span>
 </footer>
-<input type="file" id="fi" accept=".md,.markdown,.txt" multiple hidden>
+<input type="file" id="fi" accept=".md,.markdown,.txt,.json" multiple hidden>
 
 <script>
 const $ = s => document.querySelector(s);
 const FLAGS = ['🟥','🟧','🟨','🟩','🟦','🟪','🟫','⬜'];
 const FT = [{description:'Markdown', accept:{'text/markdown':['.md','.markdown','.txt']}}];
+const CAL_FT = [{description:'Calender', accept:{'application/json':['.json']}}];
+const isCalendar = b => Array.isArray(b.events);
 let tabs = [], T = null, active = -1, pending = [];
 let drag = null, drop = null, hov = null, hovCol = null, hovHead = null, modal = null, clip = null;
 const ph = document.createElement('div'); ph.className = 'ph';
@@ -134,7 +149,8 @@ function h(t, p = {}, ...k) {
 const st = t => $('#st').textContent = t;
 
 /* ---------- Markdown <-> Board ---------- */
-function parse(t) {
+function parse(t, calendar = false) {
+  if (calendar) return parseCalendar(t);
   const b = {title:'Board', desc:[], cols:[]};
   let cur = b, col = null, fence = false, h1 = false;
   for (const l of t.replace(/\r/g, '').split('\n')) {
@@ -153,6 +169,7 @@ function parse(t) {
   return b;
 }
 function ser(b) {
+  if (isCalendar(b)) return JSON.stringify({title:b.title, events:b.events}, null, 2) + '\n';
   let s = '# ' + b.title + '\n\n';
   if (b.desc) s += b.desc + '\n\n';
   for (const c of b.cols) {
@@ -184,7 +201,7 @@ const hidden0 = k => { const f = filt(); return f.peek && f.hide.some(t => k.tit
 const hidden = (k, q) => { const f = filt(); return !q && !f.peek && f.hide.some(t => k.title.includes(t)); };
 function toggleFilter(key, val) { const f = filt(); f[key] = f[key] === val ? null : val; render(); }
 function renderBar() {
-  const bar = $('#bar'); bar.replaceChildren(); if (!T) return;
+  const bar = $('#bar'); bar.replaceChildren(); if (!T || isCalendar(T.b)) return;
   const f = filt(), chip = (txt, on, fn, title, off, ctx) => h('button', {class:'chip' + (on ? ' on' : '') + (off ? ' off' : ''), title, onclick:fn, oncontextmenu:ctx}, txt);
   const lg = legend(T.b), kinds = new Set(T.b.cols.flatMap(c => c.cards.map(badge).filter(Boolean).map(x => x.kind)));
   if (lg.length) bar.append('Filter:', ...lg.map(x => chip(x.tag + ' ' + x.label, f.tag === x.tag, () => toggleFilter('tag', x.tag),
@@ -285,7 +302,7 @@ async function persist() {
     await idbSet('session', {tabs:list, active});
   } catch (e) {}
 }
-const mk = (text, hd, name, mod) => ({b:parse(text), h:hd, name, mod:mod || 0, undo:[], redo:[], dirty:false, timer:0});
+const mk = (text, hd, name, mod) => ({b:parse(text, /\.json$/i.test(name)), h:hd, name, mod:mod || 0, undo:[], redo:[], dirty:false, timer:0});
 async function restore() {
   let s; try { s = await idbGet('session'); } catch (e) {}
   if (!s) return;
@@ -324,7 +341,7 @@ async function addFile(hd) {
 }
 async function openFile() {
   if (window.showOpenFilePicker) {
-    try { for (const hd of await showOpenFilePicker({types:FT, multiple:true})) await addFile(hd); } catch (e) {}
+    try { for (const hd of await showOpenFilePicker({types:[...FT, ...CAL_FT], multiple:true})) await addFile(hd); } catch (e) {}
   } else $('#fi').click();
 }
 $('#fi').onchange = async e => {
@@ -343,7 +360,7 @@ function save(t = T) {
   clearTimeout(t.timer); t.timer = setTimeout(() => write(t), 400);
 }
 async function write(t) {
-  if (!t.h) { if (t === T) st('Not on disk – Save downloads the .md'); persist(); return; }
+  if (!t.h) { if (t === T) st(isCalendar(t.b) ? 'Not on disk – Save downloads the calendar' : 'Not on disk – Save downloads the .md'); persist(); return; }
   if (await checkExt(t)) return;   // file changed on disk: external version wins
   t.busy = true;
   try {
@@ -356,7 +373,7 @@ async function write(t) {
 async function reloadExt(t, f) {
   const lost = t.dirty;
   clearTimeout(t.timer);
-  t.mod = f.lastModified; t.b = parse(await f.text()); t.undo = []; t.redo = []; t.dirty = false;
+  t.mod = f.lastModified; t.b = parse(await f.text(), isCalendar(t.b)); t.undo = []; t.redo = []; t.dirty = false;
   if (modal && modal.tab === t) { modal.el.remove(); modal = null; }
   if (t === T) { render(); st(lost ? 'Changed on disk – your unsaved edits were replaced' : 'Reloaded from disk'); } else renderTabs();
 }
@@ -372,10 +389,10 @@ async function saveNow() {
   if (!T) return;
   clearTimeout(T.timer);
   if (!T.h && window.showSaveFilePicker) {
-    try { T.h = await showSaveFilePicker({suggestedName:T.name, types:FT}); T.name = T.h.name; persist(); } catch (e) { return; }
+    try { T.h = await showSaveFilePicker({suggestedName:T.name, types:isCalendar(T.b) ? CAL_FT : FT}); T.name = T.h.name; persist(); } catch (e) { return; }
   }
   if (T.h) return write(T);
-  const a = h('a', {href:URL.createObjectURL(new Blob([ser(T.b)], {type:'text/markdown'})), download:T.name});
+  const a = h('a', {href:URL.createObjectURL(new Blob([ser(T.b)], {type:isCalendar(T.b) ? 'application/json' : 'text/markdown'})), download:T.name});
   a.click(); URL.revokeObjectURL(a.href); T.dirty = false; st('Downloaded'); renderTabs();
 }
 async function checkAll() {   // pick up external changes (e.g. Claude, Syncthing)
@@ -388,8 +405,8 @@ addEventListener('beforeunload', e => { if (tabs.some(t => t.dirty)) e.preventDe
 
 /* ---------- Mutations / undo ---------- */
 function mut(fn) { T.undo.push(ser(T.b)); T.redo = []; fn(); render(); save(); }
-function doUndo() { if (!T.undo.length) return; T.redo.push(ser(T.b)); T.b = parse(T.undo.pop()); render(); save(); }
-function doRedo() { if (!T.redo.length) return; T.undo.push(ser(T.b)); T.b = parse(T.redo.pop()); render(); save(); }
+function doUndo() { if (!T.undo.length) return; T.redo.push(ser(T.b)); T.b = parse(T.undo.pop(), isCalendar(T.b)); render(); save(); }
+function doRedo() { if (!T.redo.length) return; T.undo.push(ser(T.b)); T.b = parse(T.redo.pop(), isCalendar(T.b)); render(); save(); }
 function rename(el, get, set) {
   if (el.parentNode) el.parentNode.draggable = false;
   el.contentEditable = true; el.focus(); getSelection().selectAllChildren(el);
@@ -420,7 +437,7 @@ function copyCard(c) {
 /* ---------- Rendering ---------- */
 function moveTo(ti) {   // move the dragged card / column into another open board
   const d = drag, dst = tabs[ti]; drag = null;
-  if (!d || !dst || dst === T) return;
+  if (!d || !dst || dst === T || isCalendar(dst.b) || isCalendar(T.b)) return;
   const src = T, col = src.b.cols[d.ci]; let msg;
   dst.undo.push(ser(dst.b)); dst.redo = [];
   if (d.t === 'col') {
@@ -439,7 +456,7 @@ function moveTo(ti) {   // move the dragged card / column into another open boar
 }
 function renderTabs() {
   $('#tabs').replaceChildren(...tabs.map((t, i) => h('div', {class:'tab' + (i === active ? ' on' : ''), title:t.b.title, onclick:() => activate(i),
-    ondragover:e => { if (drag && i !== active) { e.preventDefault(); e.currentTarget.classList.add('dt'); } },
+    ondragover:e => { if (drag && i !== active && !isCalendar(t.b)) { e.preventDefault(); e.currentTarget.classList.add('dt'); } },
     ondragleave:e => e.currentTarget.classList.remove('dt'),
     ondrop:e => { if (drag && i !== active) { e.preventDefault(); moveTo(i); } }},
     t.name + (t.dirty ? ' •' : ''),
@@ -458,6 +475,7 @@ function render() {
       window.showOpenFilePicker ? '' : h('p', {class:'hint'}, 'This browser cannot write back to files: Save downloads the .md. Boards stay open between visits, but use Chrome, Edge or Brave for autosave to disk.')));
     return;
   }
+  if (isCalendar(T.b)) { hov = hovCol = hovHead = null; renderCalendar(); return; }
   const B = T.b, q = $('#q').value.toLowerCase(), ob = otherBoards(), repo = repoOf(B);
   B.cols.forEach((c, ci) => {
     const list = h('div', {class:'cards'}); let nh = 0;
@@ -533,7 +551,7 @@ function render() {
   });
   app.append(h('button', {class:'add addcol', onclick:addCol}, '+ Column'));
 }
-$('#app').addEventListener('dblclick', e => { if (T && e.target.id === 'app') addCol(); });
+$('#app').addEventListener('dblclick', e => { if (T && !isCalendar(T.b) && e.target.id === 'app') addCol(); });
 
 /* ---------- Card dialog ---------- */
 const EMOJI = ['✅','❌','⚠️','🔥','🐛','💡','❓','❗','⭐','🚧','📌','🔒','🔧','📝','🧪','🚀','⏱','🔍','📦','🎨','💬','👀','👍','🏁','→','←','↑','↓','⇒','✔','✘','…'];
@@ -574,6 +592,87 @@ function closeModal() {
   render();
 }
 
+/* ---------- Absence calendar ---------- */
+const calendarDate = d => [String(d.getFullYear()).padStart(4, '0'), String(d.getMonth()+1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+const validCalendarDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s)) && new Date(s).toISOString().slice(0,10) === s;
+function parseCalendar(text) {
+  const cal = JSON.parse(text), ids = new Set();
+  if (!cal || typeof cal.title !== 'string' || !cal.title.trim() || !Array.isArray(cal.events)) throw Error('Invalid calendar');
+  for (const e of cal.events) {
+    if (!e || typeof e.id !== 'string' || !e.id || ids.has(e.id) || typeof e.person !== 'string' || !e.person.trim() || typeof e.reason !== 'string' || !validCalendarDate(e.start) || !validCalendarDate(e.end) || e.start > e.end) throw Error('Invalid calendar entry');
+    ids.add(e.id);
+  }
+  return {title:cal.title, events:cal.events, desc:'', cols:[]};
+}
+async function newCalendar() {
+  const t = mk(JSON.stringify({title:'Calender', events:[]}), null, 'calendar.calendar.json');
+  if (window.showSaveFilePicker) {
+    try { t.h = await showSaveFilePicker({suggestedName:t.name, types:CAL_FT}); t.name = t.h.name; } catch (e) {}
+  }
+  tabs.push(t); activate(tabs.length - 1); write(t);
+}
+let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+function renderCalendar() {
+  const tab = T, q = $('#q').value.toLowerCase();
+  const events = tab.b.events.filter(e => (e.person+' '+e.reason).toLowerCase().includes(q));
+  const change = n => { calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth()+n, 1); render(); };
+  const toolbar = h('div', {class:'calendar-toolbar'},
+    h('button', {onclick:()=>change(-1), ariaLabel:'Previous month'}, '←'),
+    h('h2', {}, calendarMonth.toLocaleDateString('en', {month:'long', year:'numeric'})),
+    h('button', {onclick:()=>change(1), ariaLabel:'Next month'}, '→'),
+    h('button', {onclick:()=>{ calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1); render(); }}, 'Today'),
+    h('button', {class:'pri', onclick:()=>editAbsence(tab)}, '+ Absence'));
+  const grid = h('div', {class:'calendar-grid'});
+  for (const name of ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']) grid.append(h('div', {class:'calendar-weekday'}, name));
+  const offset = (calendarMonth.getDay()+6)%7, today = calendarDate(new Date());
+  for (let i=0; i<42; i++) {
+    const day = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), i-offset+1), iso = calendarDate(day);
+    const cell = h('div', {class:'calendar-day'+(day.getMonth()!==calendarMonth.getMonth()?' outside':'')+(iso===today?' today':'')},
+      h('button', {class:'calendar-date', title:'Add absence on '+iso, onclick:()=>editAbsence(tab, null, iso)}, String(day.getDate())));
+    for (const e of events.filter(e=>e.start<=iso && e.end>=iso)) cell.append(h('button', {class:'calendar-event', title:e.person+' · '+e.reason, onclick:()=>editAbsence(tab,e)}, e.person+' · '+e.reason));
+    grid.append(cell);
+  }
+  const list = h('div', {class:'calendar-list'}, h('h3', {}, 'Absences this month'));
+  const start = calendarDate(calendarMonth), end = calendarDate(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth()+1, 0));
+  const visible = events.filter(e=>e.start<=end && e.end>=start).sort((a,b)=>a.start.localeCompare(b.start)||a.person.localeCompare(b.person));
+  if (!visible.length) list.append(h('p', {class:'hint'}, 'No absences recorded.'));
+  for (const e of visible) list.append(h('button', {onclick:()=>editAbsence(tab,e)}, e.person+' · '+e.reason+' · '+e.start+' – '+e.end));
+  $('#app').append(h('section', {class:'calendar-wrap'}, toolbar, grid, list));
+}
+function editAbsence(tab, event = null, day = calendarDate(new Date())) {
+  if (modal || help) return;
+  const person = h('input', {required:true, value:event?.person||'', maxLength:100});
+  const start = h('input', {type:'date', required:true, value:event?.start||day});
+  const end = h('input', {type:'date', required:true, value:event?.end||day});
+  const reason = h('input', {required:true, value:event?.reason||''});
+  const error = h('p', {class:'calendar-error', role:'alert'});
+  const close = () => { overlay.remove(); modal = null; };
+  const form = h('form', {class:'dlg calendar-editor'}, h('b', {}, event?'Edit absence':'Add absence'),
+    h('label', {}, 'Member', person), h('label', {}, 'From (inclusive)', start), h('label', {}, 'To (inclusive)', end), h('label', {}, 'Reason', reason), error,
+    h('div', {class:'row'}, h('button', {type:'button', onclick:close}, 'Cancel'), h('button', {class:'pri', type:'submit'}, 'Save')));
+  const overlay = h('div', {class:'ov', role:'dialog', ariaModal:'true', ariaLabel:event?'Edit absence':'Add absence', onmousedown:e=>{if(e.target===overlay) close();}}, form);
+  const commit = fn => { close(); if (T !== tab) return; mut(fn); };
+  if (event) form.append(h('button', {type:'button', class:'danger', onclick:()=>{if(confirm('Delete absence?')) commit(()=>tab.b.events.splice(tab.b.events.findIndex(e=>e.id===event.id),1));}}, 'Delete'));
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    if (!person.value.trim() || !reason.value.trim() || !validCalendarDate(start.value) || !validCalendarDate(end.value) || start.value>end.value) { error.textContent = 'Enter a name, a reason and a valid date range.'; return; }
+    const value = {id:event?.id||crypto.randomUUID(), person:person.value.trim(), start:start.value, end:end.value, reason:reason.value.trim()};
+    commit(()=>{if(event) tab.b.events = tab.b.events.map(e=>e.id===event.id?value:e); else tab.b.events.push(value);});
+  });
+  overlay.addEventListener('keydown', e => {
+    if (e.key==='Escape') { e.preventDefault(); close(); }
+    else if ((e.ctrlKey||e.metaKey) && e.key==='Enter') { e.preventDefault(); form.requestSubmit(); }
+    else if (e.key==='Tab') {
+      const fields = [...form.querySelectorAll('input,select,button')], first = fields[0], last = fields[fields.length-1];
+      if (e.shiftKey && document.activeElement===first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement===last) { e.preventDefault(); first.focus(); }
+    }
+    e.stopPropagation();
+  });
+  modal = {el:overlay, tab, snap:ser(tab.b)}; document.body.append(overlay); person.focus();
+}
+$('#bc').onclick = newCalendar;
+
 /* ---------- Theme ---------- */
 const darkNow = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme:dark)').matches;
 function setTheme(th) {
@@ -602,6 +701,11 @@ const HELP = [
     ['Drag a card or column', 'Move it'], ['Drop onto a tab', 'Move to another open board'],
     ['Click a legend chip / E / V', 'Dim everything else'],
     ['Right-click a legend chip', 'Hide all cards with that flag (again: show); "n hidden" in a column header shows them']]],
+  ['Calender', [
+    ['Calender', 'Create a calender (.calendar.json)'],
+    ['Click a date / + Absence', 'Add an absence; the end date is inclusive'],
+    ['Click an absence', 'Edit or delete; Ctrl+Z / Ctrl+Shift+Z undo / redo'],
+    ['Search', 'Filter by team member or reason']]],
   ['In the .md file', [
     ['[E] / [V]', 'Badge at the start of a card text: decided / proposal'],
     ['Farben: 🟥 text · 🟧 text', 'Legend line in the board description'],
@@ -633,6 +737,7 @@ addEventListener('keydown', e => {
   if (modal || !T || e.target.closest('input,textarea,[contenteditable=true]')) return;
   if (mod && key === 'z') { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
   if (mod && key === 'y') { e.preventDefault(); doRedo(); return; }
+  if (isCalendar(T.b)) return;
   const B = T.b;
   if (mod && key === 'v' && clip) {
     e.preventDefault();
